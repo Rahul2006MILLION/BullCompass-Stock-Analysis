@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from app.models.news import NewsItem
 from app.database.news_repository import NewsRepository
 from app.services.news.aggregator import NewsAggregator
@@ -25,8 +25,12 @@ class NewsService:
     def get_news_feed(
         self,
         limit: int = 50,
+        offset: int = 0,
         category: Optional[str] = None,
         importance: Optional[str] = None,
+        source: Optional[str] = None,
+        search: Optional[str] = None,
+        ticker: Optional[str] = None,
         auto_sync_if_empty: bool = True,
     ) -> List[NewsItem]:
         """
@@ -36,7 +40,22 @@ class NewsService:
         if count == 0 and auto_sync_if_empty:
             self.sync_news()
 
-        return self.repository.get_recent_news(limit=limit, category=category, importance=importance)
+        return self.repository.get_recent_news(
+            limit=limit,
+            offset=offset,
+            category=category,
+            importance=importance,
+            source=source,
+            search=search,
+            ticker=ticker,
+        )
 
     def get_news_by_id(self, news_id: str) -> Optional[NewsItem]:
         return self.repository.get_news_by_id(news_id)
+
+    def get_filter_metadata(self) -> Dict[str, Any]:
+        return {
+            "sources": self.repository.get_sources(),
+            "categories": self.repository.get_categories(),
+            "total_count": self.repository.get_news_count(),
+        }

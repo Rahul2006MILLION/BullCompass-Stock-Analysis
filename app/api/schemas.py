@@ -61,6 +61,12 @@ class NewsListResponse(BaseModel):
     news: List[NewsItemResponse]
 
 
+class NewsMetadataResponse(BaseModel):
+    sources: List[str]
+    categories: List[str]
+    total_count: int
+
+
 class NewsSyncResponse(BaseModel):
     status: str
     inserted_count: int

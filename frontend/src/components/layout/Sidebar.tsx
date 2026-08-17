@@ -8,9 +8,9 @@ import {
   Briefcase,
   History,
   TrendingUp,
+  Newspaper,
   Bot,
   RefreshCw,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
   { name: "Portfolio", href: "/portfolio", icon: Briefcase },
   { name: "Transactions", href: "/transactions", icon: History },
   { name: "Market", href: "/market", icon: TrendingUp },
+  { name: "News", href: "/news", icon: Newspaper },
   { name: "AI Analysis", href: "/ai-analysis", icon: Bot, badge: "AI" },
 ];
 

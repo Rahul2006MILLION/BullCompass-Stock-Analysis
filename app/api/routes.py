@@ -24,6 +24,7 @@ from app.api.schemas import (
     AIAnalysisResponse,
     NewsItemResponse,
     NewsListResponse,
+    NewsMetadataResponse,
     NewsSyncResponse,
     EntityExposureResponse,
     MessageResponse,
@@ -369,15 +370,29 @@ def get_realized_profit():
 @router.get("/news", response_model=NewsListResponse)
 def get_news(
     limit: int = 50,
+    offset: int = 0,
     category: Optional[str] = None,
     importance: Optional[str] = None,
+    source: Optional[str] = None,
+    search: Optional[str] = None,
+    company: Optional[str] = None,
+    ticker: Optional[str] = None,
 ):
     """
-    Retrieve normalized market news items with optional category and importance filters.
+    Retrieve normalized market news items with optional category, importance, source, search, and ticker filters.
     """
     try:
         service = get_news_service()
-        items = service.get_news_feed(limit=limit, category=category, importance=importance)
+        selected_ticker = ticker or company
+        items = service.get_news_feed(
+            limit=limit,
+            offset=offset,
+            category=category,
+            importance=importance,
+            source=source,
+            search=search,
+            ticker=selected_ticker,
+        )
         response_items = [
             NewsItemResponse(
                 id=item.id,
@@ -409,6 +424,26 @@ def get_news(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch news feed: {str(e)}",
+        )
+
+
+@router.get("/news/metadata", response_model=NewsMetadataResponse)
+def get_news_metadata():
+    """
+    Get distinct categories, sources, and total count for building dynamic UI filters.
+    """
+    try:
+        service = get_news_service()
+        data = service.get_filter_metadata()
+        return NewsMetadataResponse(
+            sources=data.get("sources", []),
+            categories=data.get("categories", []),
+            total_count=data.get("total_count", 0),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch news metadata: {str(e)}",
         )
 
 

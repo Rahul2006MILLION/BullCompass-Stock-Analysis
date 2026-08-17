@@ -8,6 +8,13 @@ import {
 } from "@/types/portfolio";
 import { Transaction } from "@/types/transaction";
 import { CompanyQuote, AIAnalysisResult } from "@/types/market";
+import {
+  NewsItem,
+  NewsListResponse,
+  NewsMetadataResponse,
+  NewsSyncResponse,
+  NewsFilterParams,
+} from "@/types/news";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -114,5 +121,36 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ ticker }),
     });
+  },
+
+  // News & Intelligence
+  getNews: (params?: NewsFilterParams): Promise<NewsListResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      if (params.category && params.category !== "ALL") searchParams.append("category", params.category);
+      if (params.importance && params.importance !== "ALL") searchParams.append("importance", params.importance);
+      if (params.source && params.source !== "ALL") searchParams.append("source", params.source);
+      if (params.search) searchParams.append("search", params.search);
+      if (params.ticker && params.ticker !== "ALL") searchParams.append("ticker", params.ticker);
+      if (params.company && params.company !== "ALL") searchParams.append("company", params.company);
+      if (params.limit) searchParams.append("limit", params.limit.toString());
+      if (params.offset) searchParams.append("offset", params.offset.toString());
+    }
+    const queryString = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return fetchJson<NewsListResponse>(`/api/news${queryString}`);
+  },
+
+  getNewsMetadata: (): Promise<NewsMetadataResponse> => {
+    return fetchJson<NewsMetadataResponse>("/api/news/metadata");
+  },
+
+  syncNews: (): Promise<NewsSyncResponse> => {
+    return fetchJson<NewsSyncResponse>("/api/news/sync", {
+      method: "POST",
+    });
+  },
+
+  getNewsArticle: (newsId: string): Promise<NewsItem> => {
+    return fetchJson<NewsItem>(`/api/news/${encodeURIComponent(newsId)}`);
   },
 };

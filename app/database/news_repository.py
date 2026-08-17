@@ -66,28 +66,53 @@ class NewsRepository:
     def get_recent_news(
         self,
         limit: int = 50,
+        offset: int = 0,
         category: Optional[str] = None,
         importance: Optional[str] = None,
+        source: Optional[str] = None,
+        search: Optional[str] = None,
+        ticker: Optional[str] = None,
     ) -> List[NewsItem]:
         cursor = self.db.connection.cursor()
 
-        query = "SELECT id, title, summary, source, source_url, published_at, fetched_at, category, subcategory, importance, raw_content FROM news_articles"
+        query = """
+            SELECT DISTINCT n.id, n.title, n.summary, n.source, n.source_url,
+                            n.published_at, n.fetched_at, n.category, n.subcategory,
+                            n.importance, n.raw_content
+            FROM news_articles n
+            LEFT JOIN news_entities e ON n.id = e.news_id
+        """
         params = []
         conditions = []
 
         if category and category.upper() != "ALL":
-            conditions.append("category = ?")
+            conditions.append("n.category = ?")
             params.append(category)
 
         if importance and importance.upper() != "ALL":
-            conditions.append("importance = ?")
+            conditions.append("n.importance = ?")
             params.append(importance)
+
+        if source and source.upper() != "ALL":
+            conditions.append("n.source = ?")
+            params.append(source)
+
+        if search and search.strip():
+            search_pattern = f"%{search.strip()}%"
+            conditions.append("(n.title LIKE ? OR n.summary LIKE ? OR n.subcategory LIKE ?)")
+            params.extend([search_pattern, search_pattern, search_pattern])
+
+        if ticker and ticker.strip() and ticker.upper() != "ALL":
+            ticker_clean = ticker.strip().upper()
+            ticker_pattern = f"%{ticker_clean}%"
+            conditions.append("(e.ticker = ? OR n.subcategory = ? OR n.title LIKE ?)")
+            params.extend([ticker_clean, ticker_clean, ticker_pattern])
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
 
-        query += " ORDER BY published_at DESC LIMIT ?"
-        params.append(limit)
+        query += " ORDER BY n.published_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
 
         cursor.execute(query, tuple(params))
         rows = cursor.fetchall()
@@ -162,6 +187,16 @@ class NewsRepository:
             raw_content=r[10],
             entities=entities,
         )
+
+    def get_sources(self) -> List[str]:
+        cursor = self.db.connection.cursor()
+        cursor.execute("SELECT DISTINCT source FROM news_articles ORDER BY source ASC")
+        return [r[0] for r in cursor.fetchall() if r[0]]
+
+    def get_categories(self) -> List[str]:
+        cursor = self.db.connection.cursor()
+        cursor.execute("SELECT DISTINCT category FROM news_articles ORDER BY category ASC")
+        return [r[0] for r in cursor.fetchall() if r[0]]
 
     def get_news_count(self) -> int:
         cursor = self.db.connection.cursor()

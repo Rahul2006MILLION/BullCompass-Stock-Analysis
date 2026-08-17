@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 
 # --- Requests ---
@@ -127,6 +127,115 @@ class CompanyQuoteResponse(BaseModel):
     currency: str
     market_cap: int
     current_price: float
+
+
+# --- Fundamental Research & AI Analysis Schemas ---
+
+class IncomeStatementResponse(BaseModel):
+    years: List[str]
+    revenue: Dict[str, Optional[float]]
+    operating_income: Dict[str, Optional[float]]
+    operating_margin: Dict[str, Optional[float]]
+    ebitda: Dict[str, Optional[float]]
+    ebitda_margin: Dict[str, Optional[float]]
+    net_income: Dict[str, Optional[float]]
+    net_margin: Dict[str, Optional[float]]
+    eps: Dict[str, Optional[float]]
+    revenue_cagr_3y: Optional[float] = None
+    net_profit_cagr_3y: Optional[float] = None
+
+
+class BalanceSheetResponse(BaseModel):
+    years: List[str]
+    is_financial_institution: bool
+    total_assets: Dict[str, Optional[float]]
+    total_liabilities: Dict[str, Optional[float]]
+    total_equity: Dict[str, Optional[float]]
+    cash_and_equivalents: Dict[str, Optional[float]]
+    total_debt: Dict[str, Optional[float]]
+    net_debt: Dict[str, Optional[float]]
+    debt_to_equity: Optional[float] = None
+    current_ratio: Optional[float] = None
+    deposits: Optional[Dict[str, Optional[float]]] = None
+    advances: Optional[Dict[str, Optional[float]]] = None
+
+
+class CashFlowResponse(BaseModel):
+    years: List[str]
+    is_applicable: bool
+    operating_cash_flow: Dict[str, Optional[float]]
+    capital_expenditure: Dict[str, Optional[float]]
+    free_cash_flow: Dict[str, Optional[float]]
+    fcf_conversion: Optional[float] = None
+    cash_flow_quality_flag: str
+
+
+class KeyRatiosResponse(BaseModel):
+    pe_ratio: Optional[float] = None
+    forward_pe: Optional[float] = None
+    pb_ratio: Optional[float] = None
+    ev_to_ebitda: Optional[float] = None
+    roe: Optional[float] = None
+    roce: Optional[float] = None
+    roa: Optional[float] = None
+    debt_to_equity: Optional[float] = None
+    current_ratio: Optional[float] = None
+    operating_margin: Optional[float] = None
+    net_margin: Optional[float] = None
+    revenue_growth_yoy: Optional[float] = None
+    earnings_growth_yoy: Optional[float] = None
+    dividend_yield: Optional[float] = None
+
+
+class HistoricalTrendsResponse(BaseModel):
+    revenue_trend: str
+    profit_trend: str
+    margin_trend: str
+    roe_trend: str
+    debt_trend: str
+    cash_flow_trend: str
+
+
+class QualityScoreBreakdownResponse(BaseModel):
+    business_quality: float
+    financial_strength: float
+    growth: float
+    profitability: float
+    cash_generation: float
+    valuation: float
+    risk_profile: float
+    total_score: float
+
+
+class InvestmentDecisionResponse(BaseModel):
+    decision: str
+    fundamental_score: float
+    score_breakdown: QualityScoreBreakdownResponse
+    data_confidence: str
+    valuation_status: str
+    key_strengths: List[str]
+    key_concerns: List[str]
+    is_bank: bool
+
+
+class ComprehensiveResearchResponse(BaseModel):
+    ticker: str
+    company_name: str
+    sector: str
+    industry: str
+    currency: str
+    current_price: float
+    market_cap: float
+    income_statement: IncomeStatementResponse
+    balance_sheet: BalanceSheetResponse
+    cash_flow: CashFlowResponse
+    ratios: KeyRatiosResponse
+    historical_trends: HistoricalTrendsResponse
+    decision: InvestmentDecisionResponse
+    recent_news: List[Dict[str, Any]]
+    ai_thesis_report: str
+    generated_at: str
+    ollama_status: str
 
 
 class AIAnalysisResponse(BaseModel):

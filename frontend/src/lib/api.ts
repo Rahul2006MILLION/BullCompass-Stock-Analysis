@@ -15,6 +15,7 @@ import {
   NewsSyncResponse,
   NewsFilterParams,
 } from "@/types/news";
+import { ComprehensiveResearchReport } from "@/types/research";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -111,13 +112,20 @@ export const api = {
     });
   },
 
-  // Market & AI
+  // Market & Comprehensive AI Research
   getCompanyQuote: (ticker: string): Promise<CompanyQuote> => {
     return fetchJson<CompanyQuote>(`/api/market/quote/${encodeURIComponent(ticker)}`);
   },
 
   analyzeStock: (ticker: string): Promise<AIAnalysisResult> => {
     return fetchJson<AIAnalysisResult>("/api/ai/analyze", {
+      method: "POST",
+      body: JSON.stringify({ ticker }),
+    });
+  },
+
+  getResearchReport: (ticker: string): Promise<ComprehensiveResearchReport> => {
+    return fetchJson<ComprehensiveResearchReport>("/api/research/analyze", {
       method: "POST",
       body: JSON.stringify({ ticker }),
     });

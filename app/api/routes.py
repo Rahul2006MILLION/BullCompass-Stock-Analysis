@@ -10,6 +10,7 @@ from app.database.news_repository import NewsRepository
 from app.services.stock_service import StockService
 from app.services.ollama_service import OllamaService
 from app.services.news_service import NewsService
+from app.services.research_coordinator import ResearchCoordinatorService
 from app.api.schemas import (
     BuyStockRequest,
     SellStockRequest,
@@ -27,6 +28,14 @@ from app.api.schemas import (
     NewsMetadataResponse,
     NewsSyncResponse,
     EntityExposureResponse,
+    IncomeStatementResponse,
+    BalanceSheetResponse,
+    CashFlowResponse,
+    KeyRatiosResponse,
+    HistoricalTrendsResponse,
+    QualityScoreBreakdownResponse,
+    InvestmentDecisionResponse,
+    ComprehensiveResearchResponse,
     MessageResponse,
 )
 
@@ -60,6 +69,10 @@ def get_decision_agent() -> DecisionAgent:
 
 def get_news_service() -> NewsService:
     return NewsService()
+
+
+def get_research_coordinator() -> ResearchCoordinatorService:
+    return ResearchCoordinatorService()
 
 
 # -------------------------------------------------------------------------
@@ -379,7 +392,7 @@ def get_news(
     ticker: Optional[str] = None,
 ):
     """
-    Retrieve normalized market news items with optional category, importance, source, search, and ticker filters.
+    Retrieve normalized market news items with optional filters.
     """
     try:
         service = get_news_service()
@@ -513,7 +526,147 @@ def get_news_article(news_id: str):
 
 
 # -------------------------------------------------------------------------
-# Market & AI Insights Endpoints
+# Comprehensive Fundamental Research & Decision Support Pipeline
+# -------------------------------------------------------------------------
+
+def _serialize_report(report) -> ComprehensiveResearchResponse:
+    inc = report.income_statement
+    bs = report.balance_sheet
+    cf = report.cash_flow
+    ratios = report.ratios
+    trends = report.historical_trends
+    dec = report.decision
+    sb = dec.score_breakdown
+
+    return ComprehensiveResearchResponse(
+        ticker=report.ticker,
+        company_name=report.company_name,
+        sector=report.sector,
+        industry=report.industry,
+        currency=report.currency,
+        current_price=report.current_price,
+        market_cap=report.market_cap,
+        income_statement=IncomeStatementResponse(
+            years=inc.years,
+            revenue=inc.revenue,
+            operating_income=inc.operating_income,
+            operating_margin=inc.operating_margin,
+            ebitda=inc.ebitda,
+            ebitda_margin=inc.ebitda_margin,
+            net_income=inc.net_income,
+            net_margin=inc.net_margin,
+            eps=inc.eps,
+            revenue_cagr_3y=inc.revenue_cagr_3y,
+            net_profit_cagr_3y=inc.net_profit_cagr_3y,
+        ),
+        balance_sheet=BalanceSheetResponse(
+            years=bs.years,
+            is_financial_institution=bs.is_financial_institution,
+            total_assets=bs.total_assets,
+            total_liabilities=bs.total_liabilities,
+            total_equity=bs.total_equity,
+            cash_and_equivalents=bs.cash_and_equivalents,
+            total_debt=bs.total_debt,
+            net_debt=bs.net_debt,
+            debt_to_equity=bs.debt_to_equity,
+            current_ratio=bs.current_ratio,
+            deposits=bs.deposits,
+            advances=bs.advances,
+        ),
+        cash_flow=CashFlowResponse(
+            years=cf.years,
+            is_applicable=cf.is_applicable,
+            operating_cash_flow=cf.operating_cash_flow,
+            capital_expenditure=cf.capital_expenditure,
+            free_cash_flow=cf.free_cash_flow,
+            fcf_conversion=cf.fcf_conversion,
+            cash_flow_quality_flag=cf.cash_flow_quality_flag,
+        ),
+        ratios=KeyRatiosResponse(
+            pe_ratio=ratios.pe_ratio,
+            forward_pe=ratios.forward_pe,
+            pb_ratio=ratios.pb_ratio,
+            ev_to_ebitda=ratios.ev_to_ebitda,
+            roe=ratios.roe,
+            roce=ratios.roce,
+            roa=ratios.roa,
+            debt_to_equity=ratios.debt_to_equity,
+            current_ratio=ratios.current_ratio,
+            operating_margin=ratios.operating_margin,
+            net_margin=ratios.net_margin,
+            revenue_growth_yoy=ratios.revenue_growth_yoy,
+            earnings_growth_yoy=ratios.earnings_growth_yoy,
+            dividend_yield=ratios.dividend_yield,
+        ),
+        historical_trends=HistoricalTrendsResponse(
+            revenue_trend=trends.revenue_trend,
+            profit_trend=trends.profit_trend,
+            margin_trend=trends.margin_trend,
+            roe_trend=trends.roe_trend,
+            debt_trend=trends.debt_trend,
+            cash_flow_trend=trends.cash_flow_trend,
+        ),
+        decision=InvestmentDecisionResponse(
+            decision=dec.decision.value if hasattr(dec.decision, "value") else str(dec.decision),
+            fundamental_score=dec.fundamental_score,
+            score_breakdown=QualityScoreBreakdownResponse(
+                business_quality=sb.business_quality,
+                financial_strength=sb.financial_strength,
+                growth=sb.growth,
+                profitability=sb.profitability,
+                cash_generation=sb.cash_generation,
+                valuation=sb.valuation,
+                risk_profile=sb.risk_profile,
+                total_score=sb.total_score,
+            ),
+            data_confidence=dec.data_confidence.value if hasattr(dec.data_confidence, "value") else str(dec.data_confidence),
+            valuation_status=dec.valuation_status.value if hasattr(dec.valuation_status, "value") else str(dec.valuation_status),
+            key_strengths=dec.key_strengths,
+            key_concerns=dec.key_concerns,
+            is_bank=dec.is_bank,
+        ),
+        recent_news=report.recent_news,
+        ai_thesis_report=report.ai_thesis_report,
+        generated_at=report.generated_at,
+        ollama_status=report.ollama_status,
+    )
+
+
+@router.post("/research/analyze", response_model=ComprehensiveResearchResponse)
+def analyze_company_research(payload: AIAnalyzeRequest):
+    """
+    Run the complete institutional investment research engine:
+    Deterministic multi-year statements, ratios, trends, 0-100 scoring, decision tiering, and Ollama synthesis.
+    """
+    try:
+        coordinator = get_research_coordinator()
+        report = coordinator.generate_research_report(payload.ticker)
+        return _serialize_report(report)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Research analysis pipeline failed: {str(e)}",
+        )
+
+
+@router.get("/research/{ticker}", response_model=ComprehensiveResearchResponse)
+def get_company_research(ticker: str):
+    """
+    GET shortcut to generate or retrieve comprehensive fundamental research report.
+    """
+    try:
+        coordinator = get_research_coordinator()
+        report = coordinator.generate_research_report(ticker)
+        return _serialize_report(report)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch research report for {ticker}: {str(e)}",
+        )
+
+
+# -------------------------------------------------------------------------
+# Legacy Market & AI Insights Endpoints
 # -------------------------------------------------------------------------
 
 @router.get("/market/quote/{ticker}", response_model=CompanyQuoteResponse)
@@ -554,14 +707,12 @@ def analyze_stock(payload: AIAnalyzeRequest):
     Perform deep AI analysis using DecisionAgent and Ollama.
     """
     try:
-        service = get_stock_service()
         agent = get_decision_agent()
-        company = service.get_company_info(payload.ticker)
-        analysis_text = agent.analyze_company(payload.ticker)
+        report = agent.generate_full_research_report(payload.ticker)
         return AIAnalysisResponse(
             ticker=payload.ticker.upper(),
-            company_name=company.name or payload.ticker.upper(),
-            analysis=analysis_text,
+            company_name=report.company_name,
+            analysis=report.ai_thesis_report,
         )
     except Exception as e:
         raise HTTPException(

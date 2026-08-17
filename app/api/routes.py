@@ -6,8 +6,10 @@ from app.agents.decision_agent import DecisionAgent
 from app.database.portfolio_repository import PortfolioRepository
 from app.database.portfolio_history_repository import PortfolioHistoryRepository
 from app.database.portfolio_transaction_repository import PortfolioTransactionRepository
+from app.database.news_repository import NewsRepository
 from app.services.stock_service import StockService
 from app.services.ollama_service import OllamaService
+from app.services.news_service import NewsService
 from app.api.schemas import (
     BuyStockRequest,
     SellStockRequest,
@@ -20,6 +22,10 @@ from app.api.schemas import (
     TransactionResponse,
     CompanyQuoteResponse,
     AIAnalysisResponse,
+    NewsItemResponse,
+    NewsListResponse,
+    NewsSyncResponse,
+    EntityExposureResponse,
     MessageResponse,
 )
 
@@ -49,6 +55,10 @@ def get_stock_service() -> StockService:
 
 def get_decision_agent() -> DecisionAgent:
     return DecisionAgent(OllamaService(), StockService())
+
+
+def get_news_service() -> NewsService:
+    return NewsService()
 
 
 # -------------------------------------------------------------------------
@@ -349,6 +359,121 @@ def get_realized_profit():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch realized profit: {str(e)}",
+        )
+
+
+# -------------------------------------------------------------------------
+# News Ingestion & Market Feeds Endpoints (Phase 1)
+# -------------------------------------------------------------------------
+
+@router.get("/news", response_model=NewsListResponse)
+def get_news(
+    limit: int = 50,
+    category: Optional[str] = None,
+    importance: Optional[str] = None,
+):
+    """
+    Retrieve normalized market news items with optional category and importance filters.
+    """
+    try:
+        service = get_news_service()
+        items = service.get_news_feed(limit=limit, category=category, importance=importance)
+        response_items = [
+            NewsItemResponse(
+                id=item.id,
+                title=item.title,
+                summary=item.summary,
+                source=item.source,
+                source_url=item.source_url,
+                published_at=item.published_at,
+                fetched_at=item.fetched_at,
+                category=item.category,
+                subcategory=item.subcategory,
+                importance=item.importance,
+                raw_content=item.raw_content,
+                entities=[
+                    EntityExposureResponse(
+                        ticker=e.ticker,
+                        sector=e.sector,
+                        entity_type=e.entity_type,
+                        exposure_type=e.exposure_type.value if hasattr(e.exposure_type, "value") else str(e.exposure_type),
+                        sentiment_hint=e.sentiment_hint.value if hasattr(e.sentiment_hint, "value") else str(e.sentiment_hint),
+                    )
+                    for e in item.entities
+                ],
+            )
+            for item in items
+        ]
+        return NewsListResponse(total=len(response_items), news=response_items)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch news feed: {str(e)}",
+        )
+
+
+@router.post("/news/sync", response_model=NewsSyncResponse)
+def sync_news():
+    """
+    Trigger immediate ingestion of news from all free providers.
+    """
+    try:
+        service = get_news_service()
+        new_count = service.sync_news(limit_per_provider=25)
+        return NewsSyncResponse(
+            status="success",
+            inserted_count=new_count,
+            message=f"Synchronized news successfully. {new_count} new articles ingested.",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to sync news: {str(e)}",
+        )
+
+
+@router.get("/news/{news_id}", response_model=NewsItemResponse)
+def get_news_article(news_id: str):
+    """
+    Get a single news article with entity mappings by its SHA-256 ID.
+    """
+    try:
+        service = get_news_service()
+        item = service.get_news_by_id(news_id)
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"News article with id {news_id} not found.",
+            )
+        return NewsItemResponse(
+            id=item.id,
+            title=item.title,
+            summary=item.summary,
+            source=item.source,
+            source_url=item.source_url,
+            published_at=item.published_at,
+            fetched_at=item.fetched_at,
+            category=item.category,
+            subcategory=item.subcategory,
+            importance=item.importance,
+            raw_content=item.raw_content,
+            entities=[
+                EntityExposureResponse(
+                    ticker=e.ticker,
+                    sector=e.sector,
+                    entity_type=e.entity_type,
+                    exposure_type=e.exposure_type.value if hasattr(e.exposure_type, "value") else str(e.exposure_type),
+                    sentiment_hint=e.sentiment_hint.value if hasattr(e.sentiment_hint, "value") else str(e.sentiment_hint),
+                )
+                for e in item.entities
+            ],
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch news article: {str(e)}",
         )
 
 

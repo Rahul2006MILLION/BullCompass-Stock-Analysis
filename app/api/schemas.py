@@ -31,7 +31,43 @@ class AIAnalyzeRequest(BaseModel):
     ticker: str = Field(..., description="Stock ticker symbol to analyze", example="RELIANCE")
 
 
-# --- Responses ---
+# --- News Schemas ---
+
+class EntityExposureResponse(BaseModel):
+    ticker: Optional[str] = None
+    sector: Optional[str] = None
+    entity_type: str
+    exposure_type: str
+    sentiment_hint: str
+
+
+class NewsItemResponse(BaseModel):
+    id: str
+    title: str
+    summary: Optional[str] = None
+    source: str
+    source_url: Optional[str] = None
+    published_at: str
+    fetched_at: str
+    category: str
+    subcategory: Optional[str] = None
+    importance: str = "MEDIUM"
+    raw_content: Optional[str] = None
+    entities: List[EntityExposureResponse] = []
+
+
+class NewsListResponse(BaseModel):
+    total: int
+    news: List[NewsItemResponse]
+
+
+class NewsSyncResponse(BaseModel):
+    status: str
+    inserted_count: int
+    message: str
+
+
+# --- Portfolio & Market Responses ---
 
 class HoldingItemResponse(BaseModel):
     id: Optional[int]

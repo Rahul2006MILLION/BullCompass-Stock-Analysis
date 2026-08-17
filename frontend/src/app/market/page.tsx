@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -77,47 +78,58 @@ export function MarketPage() {
         </div>
 
         {/* Ticker Search Bar */}
-        <Card className="p-6 bg-gradient-to-r from-[#0d121a] via-[#111724] to-[#0d121a]">
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="flex-1">
-                <Input
-                  placeholder="Enter Stock Symbol (e.g. TCS, INFY, RELIANCE)..."
-                  value={tickerQuery}
-                  onChange={(e) => setTickerQuery(e.target.value.toUpperCase())}
-                  icon={<Search className="w-4 h-4" />}
-                  className="py-3 text-base font-mono"
-                />
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Card className="p-6 bg-gradient-to-r from-[#0d121a] via-[#111724] to-[#0d121a]">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Enter Stock Symbol (e.g. TCS, INFY, RELIANCE)..."
+                    value={tickerQuery}
+                    onChange={(e) => setTickerQuery(e.target.value.toUpperCase())}
+                    icon={<Search className="w-4 h-4" />}
+                    className="py-3 text-base font-mono"
+                  />
+                </div>
+                <Button type="submit" variant="primary" size="lg" isLoading={isLoading}>
+                  <Search className="w-4 h-4 mr-1.5" />
+                  Fetch Live Quote
+                </Button>
               </div>
-              <Button type="submit" variant="primary" size="lg" isLoading={isLoading}>
-                <Search className="w-4 h-4 mr-1.5" />
-                Fetch Live Quote
-              </Button>
-            </div>
 
-            {/* Quick Suggestions */}
-            <div className="flex items-center gap-2 flex-wrap text-xs text-gray-400 pt-1">
-              <span className="text-[11px] font-semibold text-gray-500 uppercase">Popular:</span>
-              {POPULAR_TICKERS.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => {
-                    setTickerQuery(t);
-                    handleSearchQuote(t);
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 hover:text-emerald-400 border border-white/6 font-mono transition-colors"
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </form>
-        </Card>
+              {/* Quick Suggestions */}
+              <div className="flex items-center gap-2 flex-wrap text-xs text-gray-400 pt-1">
+                <span className="text-[11px] font-semibold text-gray-500 uppercase">Popular:</span>
+                {POPULAR_TICKERS.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setTickerQuery(t);
+                      handleSearchQuote(t);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 hover:text-emerald-400 border border-white/6 font-mono transition-colors"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </form>
+          </Card>
+        </motion.div>
 
         {/* Quote Result Card */}
         {quote && (
-          <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-6"
+          >
             <Card className="p-6 bg-[#0e1420] border-emerald-500/30">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/8">
                 <div>
@@ -214,7 +226,7 @@ export function MarketPage() {
                 </Link>
               </div>
             </Card>
-          </div>
+          </motion.div>
         )}
       </div>
 

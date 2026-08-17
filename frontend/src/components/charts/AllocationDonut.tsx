@@ -90,6 +90,9 @@ export function AllocationDonut({ holdings, totalValue }: AllocationDonutProps) 
                 outerRadius={88}
                 paddingAngle={3}
                 dataKey="value"
+                isAnimationActive={true}
+                animationDuration={850}
+                animationEasing="ease-out"
                 onMouseEnter={(_, index) => setActiveIndex(index)}
                 onMouseLeave={() => setActiveIndex(null)}
               >

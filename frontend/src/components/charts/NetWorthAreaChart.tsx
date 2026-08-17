@@ -150,6 +150,9 @@ export function NetWorthAreaChart({ data, isLoading = false }: NetWorthAreaChart
               strokeWidth={2.5}
               fillOpacity={1}
               fill="url(#netWorthGradient)"
+              isAnimationActive={true}
+              animationDuration={850}
+              animationEasing="ease-out"
             />
             <Area
               type="monotone"
@@ -160,6 +163,9 @@ export function NetWorthAreaChart({ data, isLoading = false }: NetWorthAreaChart
               strokeDasharray="4 4"
               fillOpacity={1}
               fill="url(#investedGradient)"
+              isAnimationActive={true}
+              animationDuration={850}
+              animationEasing="ease-out"
             />
           </AreaChart>
         </ResponsiveContainer>

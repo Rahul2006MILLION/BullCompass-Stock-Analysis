@@ -98,7 +98,13 @@ export function ProfitLossBarChart({ holdings }: ProfitLossBarChartProps) {
             />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
+            <Bar
+              dataKey="profit"
+              radius={[4, 4, 0, 0]}
+              isAnimationActive={true}
+              animationDuration={850}
+              animationEasing="ease-out"
+            >
               {chartData.map((entry, index) => (
                 <Cell
                   key={`bar-${index}`}

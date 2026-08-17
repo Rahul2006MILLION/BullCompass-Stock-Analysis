@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -85,7 +86,12 @@ export default function TransactionsPage() {
         </div>
 
         {/* Realized P&L Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+        >
           <div className="p-4 rounded-2xl bg-[#0d121a] border border-white/8">
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Cumulative Realized P&L
@@ -121,10 +127,16 @@ export default function TransactionsPage() {
             </span>
             <span className="text-[11px] text-gray-500 mt-1 block">Liquidated positions</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filter Controls */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0d121a]/80 p-3 rounded-2xl border border-white/8">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.4, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0d121a]/80 p-3 rounded-2xl border border-white/8"
+        >
           <div className="flex-1 max-w-xs">
             <Input
               placeholder="Search ticker symbol..."
@@ -150,10 +162,16 @@ export default function TransactionsPage() {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Transactions Table */}
-        <div className="rounded-2xl border border-white/8 bg-[#0d121a]/95 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="rounded-2xl border border-white/8 bg-[#0d121a]/95 overflow-hidden"
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
               <thead className="bg-[#111622] text-gray-400 border-b border-white/8 uppercase text-[10px] tracking-wider">
@@ -235,7 +253,7 @@ export default function TransactionsPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </motion.div>
       </div>
     </>
   );

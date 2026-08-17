@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { motion, useSpring, useTransform } from "framer-motion";
+import { motion, useSpring, useTransform, useReducedMotion } from "framer-motion";
 
 interface AnimatedNumberProps {
   value: number;
@@ -20,7 +20,12 @@ export function AnimatedNumber({
   prefix = "",
   suffix = "",
 }: AnimatedNumberProps) {
-  const spring = useSpring(0, { mass: 0.6, stiffness: 85, damping: 18 });
+  const shouldReduceMotion = useReducedMotion();
+  const spring = useSpring(shouldReduceMotion ? value : 0, {
+    mass: 0.5,
+    stiffness: 95,
+    damping: 19,
+  });
 
   useEffect(() => {
     spring.set(value);
@@ -48,6 +53,33 @@ export function AnimatedNumber({
       maximumFractionDigits: decimals,
     });
   });
+
+  if (shouldReduceMotion) {
+    let formatted = "";
+    if (format === "currency") {
+      const sign = value < 0 ? "-" : "";
+      formatted = `${sign}₹${Math.abs(value).toLocaleString("en-IN", {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })}`;
+    } else if (format === "percent") {
+      const sign = value > 0 ? "+" : "";
+      formatted = `${sign}${value.toFixed(decimals)}%`;
+    } else {
+      formatted = value.toLocaleString("en-IN", {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      });
+    }
+
+    return (
+      <span className={className}>
+        {prefix}
+        {formatted}
+        {suffix}
+      </span>
+    );
+  }
 
   return (
     <motion.span className={className}>

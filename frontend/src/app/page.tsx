@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
 import { PortfolioSummaryCards } from "@/components/portfolio/PortfolioSummaryCards";
 import { NetWorthAreaChart } from "@/components/charts/NetWorthAreaChart";
@@ -134,18 +135,30 @@ export default function DashboardPage() {
         </div>
 
         {/* 1. Hero Metric Cards */}
-        <PortfolioSummaryCards
-          netWorth={portfolio?.total_current_value || 0}
-          invested={portfolio?.total_invested || 0}
-          unrealizedProfit={portfolio?.total_unrealized_profit || 0}
-          returnPercentage={portfolio?.total_return_percentage || 0}
-          realizedProfit={portfolio?.total_realized_profit || 0}
-          totalHoldings={portfolio?.total_holdings || 0}
-          isLoading={isLoading}
-        />
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <PortfolioSummaryCards
+            netWorth={portfolio?.total_current_value || 0}
+            invested={portfolio?.total_invested || 0}
+            unrealizedProfit={portfolio?.total_unrealized_profit || 0}
+            returnPercentage={portfolio?.total_return_percentage || 0}
+            realizedProfit={portfolio?.total_realized_profit || 0}
+            totalHoldings={portfolio?.total_holdings || 0}
+            isLoading={isLoading}
+          />
+        </motion.div>
 
         {/* 2. Charts Section (Area History & Allocation Donut) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.15 }}
+          transition={{ duration: 0.45, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6"
+        >
           {/* Performance Area Chart (7 cols) */}
           <Card className="lg:col-span-7 p-6">
             <NetWorthAreaChart data={history} isLoading={isLoading} />
@@ -158,10 +171,16 @@ export default function DashboardPage() {
               totalValue={portfolio?.total_current_value || 0}
             />
           </Card>
-        </div>
+        </motion.div>
 
         {/* 3. Bar Chart & Quick Actions Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.15 }}
+          transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6"
+        >
           {/* Profit / Loss Bar Chart */}
           <Card className="lg:col-span-7 p-6">
             <ProfitLossBarChart holdings={portfolio?.holdings || []} />
@@ -190,10 +209,16 @@ export default function DashboardPage() {
               </Link>
             </div>
           </Card>
-        </div>
+        </motion.div>
 
         {/* 4. Active Holdings Grid */}
-        <div className="space-y-4 pt-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.15 }}
+          transition={{ duration: 0.45, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          className="space-y-4 pt-4"
+        >
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight">
@@ -221,7 +246,7 @@ export default function DashboardPage() {
             onAddNew={() => setIsAddModalOpen(true)}
             isLoading={isLoading}
           />
-        </div>
+        </motion.div>
       </div>
 
       {/* Interactive Modals */}

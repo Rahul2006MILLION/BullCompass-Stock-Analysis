@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
 import { HoldingsGrid } from "@/components/portfolio/HoldingsGrid";
 import { AddHoldingModal } from "@/components/portfolio/AddHoldingModal";
@@ -107,7 +108,12 @@ export default function PortfolioPage() {
         </div>
 
         {/* Portfolio Summary Strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        >
           <div className="p-4 rounded-2xl bg-[#0d121a] border border-white/8">
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Holdings Count
@@ -148,18 +154,25 @@ export default function PortfolioPage() {
               {formatPercentage(portfolio?.total_return_percentage)})
             </span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Holdings Grid & Table */}
-        <HoldingsGrid
-          holdings={portfolio?.holdings || []}
-          onBuy={handleOpenBuy}
-          onSell={handleOpenSell}
-          onEdit={handleOpenEdit}
-          onDelete={handleDeleteHolding}
-          onAddNew={() => setIsAddModalOpen(true)}
-          isLoading={isLoading}
-        />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.45, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <HoldingsGrid
+            holdings={portfolio?.holdings || []}
+            onBuy={handleOpenBuy}
+            onSell={handleOpenSell}
+            onEdit={handleOpenEdit}
+            onDelete={handleDeleteHolding}
+            onAddNew={() => setIsAddModalOpen(true)}
+            isLoading={isLoading}
+          />
+        </motion.div>
       </div>
 
       {/* Modals */}

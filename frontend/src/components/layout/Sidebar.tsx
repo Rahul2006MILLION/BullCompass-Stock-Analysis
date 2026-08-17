@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Briefcase,
@@ -87,30 +88,42 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative",
+                "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 group relative",
                 isActive
-                  ? "bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30 shadow-sm"
-                  : "text-gray-400 hover:text-gray-100 hover:bg-white/5 hover:translate-x-1"
+                  ? "text-emerald-400 font-semibold"
+                  : "text-gray-400 hover:text-gray-100 hover:bg-white/5 hover:translate-x-0.5 transition-transform"
               )}
             >
-              <div className="flex items-center gap-3">
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-active-pill"
+                  className="absolute inset-0 rounded-xl bg-emerald-500/15 border border-emerald-500/30 shadow-sm"
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                />
+              )}
+              {isActive && (
+                <motion.span
+                  layoutId="sidebar-active-indicator"
+                  className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full shadow-[0_0_10px_rgba(16,185,129,0.9)] z-10"
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                />
+              )}
+
+              <div className="flex items-center gap-3 relative z-10">
                 <Icon
                   className={cn(
                     "w-4 h-4 transition-all duration-200",
                     isActive
                       ? "text-emerald-400 scale-110"
-                      : "text-gray-400 group-hover:text-emerald-300 group-hover:scale-110"
+                      : "text-gray-400 group-hover:text-emerald-300 group-hover:scale-105"
                   )}
                 />
                 <span className="transition-colors group-hover:text-white">{item.name}</span>
               </div>
               {item.badge && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono font-semibold">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono font-semibold relative z-10">
                   {item.badge}
                 </span>
-              )}
-              {isActive && (
-                <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full shadow-[0_0_10px_rgba(16,185,129,0.9)]" />
               )}
             </Link>
           );

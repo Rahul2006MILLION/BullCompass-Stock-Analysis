@@ -38,6 +38,7 @@ export function EditHoldingModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!holding?.id) return;
     const qty = parseFloat(quantity);
     const price = parseFloat(averageBuyPrice);
 

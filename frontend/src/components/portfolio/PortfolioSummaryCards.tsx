@@ -13,7 +13,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
 interface PortfolioSummaryCardsProps {
   netWorth: number;
@@ -37,7 +37,7 @@ export function PortfolioSummaryCards({
   const isUnrealizedPositive = unrealizedProfit >= 0;
   const isRealizedPositive = realizedProfit >= 0;
 
-  const cardVariants = {
+  const cardVariants: Variants = {
     hidden: { opacity: 0, y: 15 },
     visible: (i: number) => ({
       opacity: 1,
@@ -45,7 +45,7 @@ export function PortfolioSummaryCards({
       transition: {
         delay: i * 0.08,
         duration: 0.4,
-        ease: [0.16, 1, 0.3, 1],
+        ease: "easeOut",
       },
     }),
   };

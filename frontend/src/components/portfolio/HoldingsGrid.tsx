@@ -5,6 +5,7 @@ import { HoldingItem } from "@/types/portfolio";
 import { StockCard } from "@/components/portfolio/StockCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
 import {
   Search,
@@ -18,6 +19,8 @@ import {
   MinusCircle,
   Edit2,
   Trash2,
+  Filter,
+  RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -41,17 +44,35 @@ export function HoldingsGrid({
   isLoading = false,
 }: HoldingsGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<"ALL" | "PROFIT" | "LOSS">("ALL");
   const [sortBy, setSortBy] = useState<"value" | "profit" | "returns" | "ticker">("value");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
-  const filteredHoldings = useMemo(() => {
-    let result = holdings.filter((h) =>
-      h.ticker.toLowerCase().includes(searchQuery.toLowerCase().trim())
+  const totalPortfolioValue = useMemo(() => {
+    return holdings.reduce(
+      (sum, h) => sum + (h.current_value || h.quantity * (h.current_price || h.average_buy_price)),
+      0
     );
+  }, [holdings]);
+
+  const profitableCount = holdings.filter((h) => (h.profit || 0) >= 0).length;
+  const lossCount = holdings.filter((h) => (h.profit || 0) < 0).length;
+
+  const filteredHoldings = useMemo(() => {
+    let result = holdings.filter((h) => {
+      const matchesSearch = h.ticker.toLowerCase().includes(searchQuery.toLowerCase().trim());
+      const isProfitable = (h.profit || 0) >= 0;
+
+      if (filterType === "PROFIT") return matchesSearch && isProfitable;
+      if (filterType === "LOSS") return matchesSearch && !isProfitable;
+      return matchesSearch;
+    });
 
     result.sort((a, b) => {
       if (sortBy === "value") {
-        return (b.current_value || 0) - (a.current_value || 0);
+        const valA = a.current_value || a.quantity * (a.current_price || a.average_buy_price);
+        const valB = b.current_value || b.quantity * (b.current_price || b.average_buy_price);
+        return valB - valA;
       }
       if (sortBy === "profit") {
         return (b.profit || 0) - (a.profit || 0);
@@ -63,7 +84,7 @@ export function HoldingsGrid({
     });
 
     return result;
-  }, [holdings, searchQuery, sortBy]);
+  }, [holdings, searchQuery, filterType, sortBy]);
 
   if (isLoading) {
     return (
@@ -97,8 +118,9 @@ export function HoldingsGrid({
 
   return (
     <div className="space-y-4">
-      {/* Controls Bar: Search, Sort, View Toggle */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0d121a]/80 p-3 rounded-2xl border border-white/8">
+      {/* Controls Bar: Search, Filters, Sort, View Toggle */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-[#0d121a]/90 p-3 rounded-2xl border border-white/8">
+        {/* Search */}
         <div className="flex-1 max-w-xs">
           <Input
             placeholder="Search holdings..."
@@ -107,6 +129,40 @@ export function HoldingsGrid({
             icon={<Search className="w-4 h-4" />}
             className="py-1.5 text-xs"
           />
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-1.5 bg-[#141a24] p-1 rounded-xl border border-white/8 text-xs self-start sm:self-center">
+          <button
+            onClick={() => setFilterType("ALL")}
+            className={`px-3 py-1 rounded-lg font-medium transition-all ${
+              filterType === "ALL"
+                ? "bg-white/10 text-white font-semibold shadow-sm"
+                : "text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            All ({holdings.length})
+          </button>
+          <button
+            onClick={() => setFilterType("PROFIT")}
+            className={`px-3 py-1 rounded-lg font-medium transition-all ${
+              filterType === "PROFIT"
+                ? "bg-emerald-500/20 text-emerald-400 font-semibold shadow-sm"
+                : "text-gray-400 hover:text-emerald-400"
+            }`}
+          >
+            Gainers ({profitableCount})
+          </button>
+          <button
+            onClick={() => setFilterType("LOSS")}
+            className={`px-3 py-1 rounded-lg font-medium transition-all ${
+              filterType === "LOSS"
+                ? "bg-rose-500/20 text-rose-400 font-semibold shadow-sm"
+                : "text-gray-400 hover:text-rose-400"
+            }`}
+          >
+            Decliners ({lossCount})
+          </button>
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-center">
@@ -147,40 +203,67 @@ export function HoldingsGrid({
             </button>
           </div>
 
-          <Button variant="mint" size="sm" onClick={onAddNew} className="text-xs py-1.5">
+          <Button variant="mint" size="sm" onClick={onAddNew} className="text-xs py-1.5 font-medium">
             <Plus className="w-3.5 h-3.5 mr-1" />
             Add Holding
           </Button>
         </div>
       </div>
 
+      {/* Filter summary when search or filter active */}
+      {(searchQuery || filterType !== "ALL") && (
+        <div className="flex items-center justify-between px-3 py-1.5 text-xs text-gray-400">
+          <span>
+            Showing <strong className="text-white">{filteredHoldings.length}</strong> of{" "}
+            <strong>{holdings.length}</strong> holdings
+          </span>
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setFilterType("ALL");
+            }}
+            className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-medium"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset filters
+          </button>
+        </div>
+      )}
+
       {/* Grid View */}
       {viewMode === "grid" ? (
-        <motion.div
-          layout
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-        >
-          <AnimatePresence>
-            {filteredHoldings.map((h) => (
-              <motion.div
-                key={h.id || h.ticker}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-              >
-                <StockCard
-                  holding={h}
-                  onBuy={onBuy}
-                  onSell={onSell}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        filteredHoldings.length === 0 ? (
+          <div className="p-8 text-center rounded-xl bg-white/2 border border-white/5 text-gray-400 text-xs">
+            No holdings found matching &quot;{searchQuery}&quot;.
+          </div>
+        ) : (
+          <motion.div
+            layout
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
+            <AnimatePresence>
+              {filteredHoldings.map((h) => (
+                <motion.div
+                  key={h.id || h.ticker}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <StockCard
+                    holding={h}
+                    totalPortfolioValue={totalPortfolioValue}
+                    onBuy={onBuy}
+                    onSell={onSell}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )
       ) : (
         /* Table View */
         <div className="rounded-2xl border border-white/8 bg-[#0d121a]/95 overflow-hidden">

@@ -13,11 +13,12 @@ import {
   MinusCircle,
   Edit2,
   Trash2,
+  Percent,
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 interface StockCardProps {
   holding: HoldingItem;
+  totalPortfolioValue?: number;
   onBuy: (holding: HoldingItem) => void;
   onSell: (holding: HoldingItem) => void;
   onEdit: (holding: HoldingItem) => void;
@@ -26,6 +27,7 @@ interface StockCardProps {
 
 export function StockCard({
   holding,
+  totalPortfolioValue = 0,
   onBuy,
   onSell,
   onEdit,
@@ -35,13 +37,26 @@ export function StockCard({
   const currentVal = holding.current_value ?? holding.quantity * (holding.current_price || holding.average_buy_price);
   const investedVal = holding.invested ?? holding.quantity * holding.average_buy_price;
 
+  const allocationWeight =
+    totalPortfolioValue > 0 && currentVal > 0
+      ? (currentVal / totalPortfolioValue) * 100
+      : 0;
+
   return (
     <Card
-      className="group transition-all duration-300 hover:border-white/20 bg-[#0d121a]/95 hover:bg-[#111722]"
-      glow={isPositive ? "none" : "none"}
+      className={`group transition-all duration-300 bg-[#0d121a]/95 hover:bg-[#111724] border-white/8 hover:border-white/20 relative overflow-hidden ${
+        isPositive ? "hover:border-emerald-500/30" : "hover:border-rose-500/30"
+      }`}
     >
+      {/* Subtle top indicator bar */}
+      <div
+        className={`absolute top-0 left-0 right-0 h-[2px] opacity-75 group-hover:opacity-100 transition-opacity ${
+          isPositive ? "bg-emerald-500" : "bg-rose-500"
+        }`}
+      />
+
       {/* Header */}
-      <div className="flex items-start justify-between mb-3.5">
+      <div className="flex items-start justify-between mb-3.5 pt-1">
         <div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-lg text-white font-mono tracking-tight group-hover:text-emerald-400 transition-colors">
@@ -50,22 +65,27 @@ export function StockCard({
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-gray-400 border border-white/8">
               NSE
             </span>
+            {allocationWeight > 0 && (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                {allocationWeight.toFixed(1)}% wt
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-400 mt-0.5">
             {holding.quantity} shares @ {formatCurrency(holding.average_buy_price)}
           </p>
         </div>
 
-        {/* Current Live Price */}
+        {/* Current Live Price & Return % */}
         <div className="text-right">
           <span className="text-sm font-bold font-mono text-gray-100 block">
             {holding.current_price ? formatCurrency(holding.current_price) : "Fetching..."}
           </span>
-          <Badge variant={isPositive ? "mint" : "coral"} size="sm">
+          <Badge variant={isPositive ? "mint" : "coral"} size="sm" dot>
             {isPositive ? (
-              <TrendingUp className="w-3 h-3 mr-0.5" />
+              <TrendingUp className="w-3 h-3 mr-0.5 inline" />
             ) : (
-              <TrendingDown className="w-3 h-3 mr-0.5" />
+              <TrendingDown className="w-3 h-3 mr-0.5 inline" />
             )}
             {formatPercentage(holding.returns)}
           </Badge>
@@ -73,7 +93,7 @@ export function StockCard({
       </div>
 
       {/* Financial Valuation Metrics */}
-      <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-[#080b10]/60 border border-white/5 mb-4 text-xs font-mono">
+      <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-[#080b10]/70 border border-white/5 mb-4 text-xs font-mono">
         <div>
           <span className="text-gray-500 block text-[11px]">Invested</span>
           <span className="text-gray-300 font-semibold">{formatCurrency(investedVal)}</span>
@@ -96,7 +116,7 @@ export function StockCard({
           variant="mint"
           size="sm"
           onClick={() => onBuy(holding)}
-          className="flex-1 text-xs py-1.5"
+          className="flex-1 text-xs py-1.5 font-medium"
         >
           <ShoppingCart className="w-3.5 h-3.5 mr-1" />
           Buy
@@ -105,7 +125,7 @@ export function StockCard({
           variant="danger"
           size="sm"
           onClick={() => onSell(holding)}
-          className="flex-1 text-xs py-1.5"
+          className="flex-1 text-xs py-1.5 font-medium"
         >
           <MinusCircle className="w-3.5 h-3.5 mr-1" />
           Sell
@@ -114,7 +134,7 @@ export function StockCard({
           variant="ghost"
           size="icon"
           onClick={() => onEdit(holding)}
-          className="h-7 w-7 text-gray-400 hover:text-gray-200"
+          className="h-8 w-8 text-gray-400 hover:text-gray-200 hover:bg-white/10 rounded-xl"
           title="Edit Holding"
         >
           <Edit2 className="w-3.5 h-3.5" />
@@ -123,7 +143,7 @@ export function StockCard({
           variant="ghost"
           size="icon"
           onClick={() => onDelete(holding)}
-          className="h-7 w-7 text-gray-500 hover:text-rose-400"
+          className="h-8 w-8 text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl"
           title="Delete Holding"
         >
           <Trash2 className="w-3.5 h-3.5" />

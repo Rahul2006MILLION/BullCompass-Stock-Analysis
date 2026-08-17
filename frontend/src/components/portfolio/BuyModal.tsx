@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { HoldingItem } from "@/types/portfolio";
 import { formatCurrency } from "@/lib/utils";
-import { ShoppingCart, IndianRupee, Hash, ArrowRight } from "lucide-react";
+import { ShoppingCart, IndianRupee, Hash, ArrowRight, Zap } from "lucide-react";
 
 interface BuyModalProps {
   isOpen: boolean;
@@ -60,7 +60,6 @@ export function BuyModal({
     }
   };
 
-  // Preview weighted average calculation
   const parsedQty = parseFloat(quantity) || 0;
   const parsedPrice = parseFloat(buyPrice) || 0;
   const totalCost = parsedQty * parsedPrice;
@@ -71,6 +70,21 @@ export function BuyModal({
     const totalQty = initialHolding.quantity + parsedQty;
     newAveragePrice = (oldCost + totalCost) / totalQty;
   }
+
+  // Quick preset handlers
+  const handleAddQuantityPreset = (addQty: number) => {
+    const current = parseFloat(quantity) || 0;
+    setQuantity((current + addQty).toString());
+  };
+
+  const handleCashPreset = (cashAmount: number) => {
+    if (parsedPrice > 0) {
+      const calculatedQty = Math.floor(cashAmount / parsedPrice);
+      if (calculatedQty > 0) {
+        setQuantity(calculatedQty.toString());
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,29 +141,61 @@ export function BuyModal({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Quantity to Buy"
-            type="number"
-            step="any"
-            min="0.001"
-            placeholder="e.g. 10"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            icon={<Hash className="w-4 h-4" />}
-            required
-          />
+          <div>
+            <Input
+              label="Quantity to Buy"
+              type="number"
+              step="any"
+              min="0.001"
+              placeholder="e.g. 10"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              icon={<Hash className="w-4 h-4" />}
+              required
+            />
+            {/* Quick Share Presets */}
+            <div className="flex gap-1 mt-1.5 flex-wrap">
+              {[5, 10, 25, 50].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => handleAddQuantityPreset(num)}
+                  className="text-[10px] px-2 py-0.5 rounded bg-white/5 hover:bg-emerald-500/15 hover:text-emerald-400 text-gray-400 font-mono transition-colors"
+                >
+                  +{num}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          <Input
-            label="Execution Price (₹)"
-            type="number"
-            step="any"
-            min="0.01"
-            placeholder="e.g. 3500.00"
-            value={buyPrice}
-            onChange={(e) => setBuyPrice(e.target.value)}
-            icon={<IndianRupee className="w-4 h-4" />}
-            required
-          />
+          <div>
+            <Input
+              label="Execution Price (₹)"
+              type="number"
+              step="any"
+              min="0.01"
+              placeholder="e.g. 3500.00"
+              value={buyPrice}
+              onChange={(e) => setBuyPrice(e.target.value)}
+              icon={<IndianRupee className="w-4 h-4" />}
+              required
+            />
+            {/* Quick Budget Presets */}
+            {parsedPrice > 0 && (
+              <div className="flex gap-1 mt-1.5 flex-wrap">
+                {[10000, 25000, 50000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => handleCashPreset(amt)}
+                    className="text-[10px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 font-mono transition-colors"
+                  >
+                    ₹{amt / 1000}k
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Live Calculation Preview Card */}

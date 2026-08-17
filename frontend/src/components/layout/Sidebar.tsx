@@ -1,0 +1,144 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  Briefcase,
+  History,
+  TrendingUp,
+  Bot,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  badge?: string;
+}
+
+const navItems: NavItem[] = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Portfolio", href: "/portfolio", icon: Briefcase },
+  { name: "Transactions", href: "/transactions", icon: History },
+  { name: "Market", href: "/market", icon: TrendingUp },
+  { name: "AI Analysis", href: "/ai-analysis", icon: Bot, badge: "AI" },
+];
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const { success, error } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleManualSnapshot = async () => {
+    try {
+      setIsRefreshing(true);
+      await api.triggerSnapshot();
+      success("Snapshot Saved", "Portfolio net worth snapshot recorded successfully.");
+      window.dispatchEvent(new Event("portfolio-updated"));
+    } catch (err: any) {
+      error("Snapshot Failed", err?.message || "Could not record snapshot.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  return (
+    <aside className="w-64 border-r border-white/8 bg-[#090c12]/95 backdrop-blur-xl flex flex-col h-screen sticky top-0 z-40 select-none">
+      {/* Brand Header */}
+      <div className="p-6 border-b border-white/8 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all duration-300">
+            <div className="w-full h-full bg-[#090c12] rounded-[10px] flex items-center justify-center text-xl">
+              🐂
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-lg tracking-tight text-white group-hover:text-emerald-400 transition-colors">
+                BullCompass
+              </span>
+            </div>
+            <span className="text-[10px] font-mono tracking-widest text-emerald-400/90 uppercase font-semibold">
+              Terminal v1.0
+            </span>
+          </div>
+        </Link>
+      </div>
+
+      {/* Navigation Links */}
+      <div className="flex-1 py-6 px-3.5 space-y-1.5 overflow-y-auto">
+        <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+          Navigation
+        </div>
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative",
+                isActive
+                  ? "bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30 shadow-sm"
+                  : "text-gray-400 hover:text-gray-100 hover:bg-white/5"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <Icon
+                  className={cn(
+                    "w-4 h-4 transition-colors",
+                    isActive
+                      ? "text-emerald-400"
+                      : "text-gray-400 group-hover:text-gray-200"
+                  )}
+                />
+                <span>{item.name}</span>
+              </div>
+              {item.badge && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono font-semibold">
+                  {item.badge}
+                </span>
+              )}
+              {isActive && (
+                <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full shadow-[0_0_8px_rgba(16,185,129,1)]" />
+              )}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Market Status & Snapshot Footer */}
+      <div className="p-4 border-t border-white/8 space-y-3 bg-[#07090e]/60">
+        <div className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-white/3 border border-white/5">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+            <span className="text-xs font-medium text-gray-300">NSE Market</span>
+          </div>
+          <span className="text-[10px] font-mono font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+            CONNECTED
+          </span>
+        </div>
+
+        <button
+          onClick={handleManualSnapshot}
+          disabled={isRefreshing}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-medium bg-[#141a24] hover:bg-[#1a2230] text-gray-300 hover:text-white border border-white/8 transition-all disabled:opacity-50 active:scale-[0.98]"
+        >
+          <RefreshCw
+            className={cn("w-3.5 h-3.5 text-emerald-400", isRefreshing && "animate-spin")}
+          />
+          <span>{isRefreshing ? "Saving Snapshot..." : "Record Snapshot"}</span>
+        </button>
+      </div>
+    </aside>
+  );
+}

@@ -1,0 +1,273 @@
+"use client";
+
+import React, { useState, useMemo } from "react";
+import { HoldingItem } from "@/types/portfolio";
+import { StockCard } from "@/components/portfolio/StockCard";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { formatCurrency, formatPercentage } from "@/lib/utils";
+import {
+  Search,
+  LayoutGrid,
+  List as ListIcon,
+  ArrowUpDown,
+  Plus,
+  TrendingUp,
+  TrendingDown,
+  ShoppingCart,
+  MinusCircle,
+  Edit2,
+  Trash2,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface HoldingsGridProps {
+  holdings: HoldingItem[];
+  onBuy: (holding: HoldingItem) => void;
+  onSell: (holding: HoldingItem) => void;
+  onEdit: (holding: HoldingItem) => void;
+  onDelete: (holding: HoldingItem) => void;
+  onAddNew: () => void;
+  isLoading?: boolean;
+}
+
+export function HoldingsGrid({
+  holdings,
+  onBuy,
+  onSell,
+  onEdit,
+  onDelete,
+  onAddNew,
+  isLoading = false,
+}: HoldingsGridProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"value" | "profit" | "returns" | "ticker">("value");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+
+  const filteredHoldings = useMemo(() => {
+    let result = holdings.filter((h) =>
+      h.ticker.toLowerCase().includes(searchQuery.toLowerCase().trim())
+    );
+
+    result.sort((a, b) => {
+      if (sortBy === "value") {
+        return (b.current_value || 0) - (a.current_value || 0);
+      }
+      if (sortBy === "profit") {
+        return (b.profit || 0) - (a.profit || 0);
+      }
+      if (sortBy === "returns") {
+        return (b.returns || 0) - (a.returns || 0);
+      }
+      return a.ticker.localeCompare(b.ticker);
+    });
+
+    return result;
+  }, [holdings, searchQuery, sortBy]);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="h-48 rounded-2xl bg-white/3 animate-pulse border border-white/5" />
+        ))}
+      </div>
+    );
+  }
+
+  if (holdings.length === 0) {
+    return (
+      <div className="p-12 text-center rounded-2xl bg-[#0e121a]/80 border border-dashed border-white/10 max-w-lg mx-auto space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-2xl">
+          🐂
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-white">Your Portfolio is Empty</h3>
+          <p className="text-xs text-gray-400 mt-1">
+            Add existing holdings or execute your first buy trade to start tracking live gains.
+          </p>
+        </div>
+        <Button variant="primary" size="md" onClick={onAddNew}>
+          <Plus className="w-4 h-4 mr-1.5" />
+          Add First Holding
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Controls Bar: Search, Sort, View Toggle */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0d121a]/80 p-3 rounded-2xl border border-white/8">
+        <div className="flex-1 max-w-xs">
+          <Input
+            placeholder="Search holdings..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            icon={<Search className="w-4 h-4" />}
+            className="py-1.5 text-xs"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-center">
+          {/* Sort Selector */}
+          <div className="flex items-center gap-1.5 bg-[#141a24] px-2.5 py-1.5 rounded-xl border border-white/8 text-xs text-gray-300">
+            <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+            <select
+              value={sortBy}
+              onChange={(e: any) => setSortBy(e.target.value)}
+              className="bg-transparent text-gray-200 focus:outline-none cursor-pointer"
+            >
+              <option value="value" className="bg-[#141a24]">Sort by Value</option>
+              <option value="profit" className="bg-[#141a24]">Sort by P&L (₹)</option>
+              <option value="returns" className="bg-[#141a24]">Sort by Returns (%)</option>
+              <option value="ticker" className="bg-[#141a24]">Sort by Ticker (A-Z)</option>
+            </select>
+          </div>
+
+          {/* Grid / Table Toggle */}
+          <div className="flex items-center bg-[#141a24] p-1 rounded-xl border border-white/8">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === "grid" ? "bg-white/10 text-emerald-400" : "text-gray-400 hover:text-white"
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === "table" ? "bg-white/10 text-emerald-400" : "text-gray-400 hover:text-white"
+              }`}
+              title="Table View"
+            >
+              <ListIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <Button variant="mint" size="sm" onClick={onAddNew} className="text-xs py-1.5">
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            Add Holding
+          </Button>
+        </div>
+      </div>
+
+      {/* Grid View */}
+      {viewMode === "grid" ? (
+        <motion.div
+          layout
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          <AnimatePresence>
+            {filteredHoldings.map((h) => (
+              <motion.div
+                key={h.id || h.ticker}
+                layout
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <StockCard
+                  holding={h}
+                  onBuy={onBuy}
+                  onSell={onSell}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      ) : (
+        /* Table View */
+        <div className="rounded-2xl border border-white/8 bg-[#0d121a]/95 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="bg-[#111622] text-gray-400 border-b border-white/8 uppercase text-[10px] tracking-wider">
+                <tr>
+                  <th className="py-3.5 px-4 font-semibold">Stock</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Quantity</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Avg Buy Price</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Live Price</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Invested</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Current Value</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Unrealized P&L</th>
+                  <th className="py-3.5 px-4 font-semibold text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredHoldings.map((h) => {
+                  const isPositive = (h.profit || 0) >= 0;
+                  const investedVal = h.invested ?? h.quantity * h.average_buy_price;
+                  const currentVal = h.current_value ?? h.quantity * (h.current_price || h.average_buy_price);
+
+                  return (
+                    <tr key={h.id || h.ticker} className="hover:bg-white/3 transition-colors">
+                      <td className="py-3 px-4 font-bold text-white text-sm">
+                        {h.ticker}
+                      </td>
+                      <td className="py-3 px-4 text-right text-gray-300">{h.quantity}</td>
+                      <td className="py-3 px-4 text-right text-gray-300">
+                        {formatCurrency(h.average_buy_price)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-white font-semibold">
+                        {h.current_price ? formatCurrency(h.current_price) : "-"}
+                      </td>
+                      <td className="py-3 px-4 text-right text-gray-300">
+                        {formatCurrency(investedVal)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-white font-semibold">
+                        {formatCurrency(currentVal)}
+                      </td>
+                      <td className={`py-3 px-4 text-right font-bold ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
+                        {formatCurrency(h.profit)}
+                        <span className="text-[11px] block font-normal">
+                          {formatPercentage(h.returns)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => onBuy(h)}
+                            className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                            title="Buy"
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onSell(h)}
+                            className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                            title="Sell"
+                          >
+                            <MinusCircle className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onEdit(h)}
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onDelete(h)}
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-rose-400"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

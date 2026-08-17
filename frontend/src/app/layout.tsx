@@ -16,10 +16,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-[#080a0f] text-gray-100 min-h-screen flex antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
+      <body className="bg-[#080a0f] text-gray-100 min-h-screen flex antialiased selection:bg-emerald-500/30 selection:text-emerald-300 relative">
+        {/* Ambient Subtle Background Orbs */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+          <div className="ambient-orb-mint -top-40 -right-40" />
+          <div className="ambient-orb-coral -bottom-40 -left-40" />
+        </div>
+
         <ToastProvider>
           {/* Main App Layout */}
-          <div className="flex w-full min-h-screen">
+          <div className="flex w-full min-h-screen relative z-10">
             {/* Sidebar */}
             <Sidebar />
 

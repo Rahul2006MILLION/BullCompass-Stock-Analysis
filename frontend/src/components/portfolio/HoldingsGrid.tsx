@@ -22,7 +22,7 @@ import {
   Filter,
   RotateCcw,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 
 interface HoldingsGridProps {
   holdings: HoldingItem[];
@@ -33,6 +33,19 @@ interface HoldingsGridProps {
   onAddNew: () => void;
   isLoading?: boolean;
 }
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: Math.min(i * 0.04, 0.3),
+      duration: 0.35,
+      ease: "easeOut",
+    },
+  }),
+};
 
 export function HoldingsGrid({
   holdings,
@@ -242,14 +255,15 @@ export function HoldingsGrid({
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
           >
             <AnimatePresence>
-              {filteredHoldings.map((h) => (
+              {filteredHoldings.map((h, idx) => (
                 <motion.div
                   key={h.id || h.ticker}
                   layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  custom={idx}
+                  initial="hidden"
+                  animate="visible"
                   exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
+                  variants={itemVariants}
                 >
                   <StockCard
                     holding={h}
@@ -315,28 +329,28 @@ export function HoldingsGrid({
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => onBuy(h)}
-                            className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                            className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:scale-110 active:scale-95 transition-all"
                             title="Buy"
                           >
                             <ShoppingCart className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onSell(h)}
-                            className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                            className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:scale-110 active:scale-95 transition-all"
                             title="Sell"
                           >
                             <MinusCircle className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onEdit(h)}
-                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white hover:scale-110 active:scale-95 transition-all"
                             title="Edit"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onDelete(h)}
-                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-rose-400"
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-rose-400 hover:scale-110 active:scale-95 transition-all"
                             title="Delete"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

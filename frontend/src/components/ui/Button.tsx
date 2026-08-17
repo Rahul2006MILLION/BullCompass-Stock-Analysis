@@ -1,7 +1,6 @@
 "use client";
 
 import React, { ButtonHTMLAttributes, forwardRef } from "react";
-import { motion, HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -24,21 +23,21 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98]";
+      "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.97] hover:-translate-y-0.5";
 
     const variantStyles = {
       primary:
-        "bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35",
+        "bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 border border-emerald-400/30",
       mint:
-        "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50 shadow-sm",
+        "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/60 shadow-sm hover:shadow-emerald-500/15",
       secondary:
-        "bg-[#181f2a] hover:bg-[#202938] text-gray-200 border border-white/10 hover:border-white/20",
+        "bg-[#181f2a] hover:bg-[#202938] text-gray-200 border border-white/10 hover:border-white/25 shadow-sm",
       danger:
-        "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 hover:border-rose-500/50",
+        "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 hover:border-rose-500/60 hover:shadow-rose-500/15",
       ghost:
-        "bg-transparent hover:bg-white/5 text-gray-400 hover:text-white",
+        "bg-transparent hover:bg-white/5 text-gray-400 hover:text-white hover:translate-y-0",
       outline:
-        "bg-transparent border border-white/15 hover:border-white/30 text-gray-300 hover:text-white",
+        "bg-transparent border border-white/15 hover:border-white/35 text-gray-300 hover:text-white hover:bg-white/4",
     };
 
     const sizeStyles = {

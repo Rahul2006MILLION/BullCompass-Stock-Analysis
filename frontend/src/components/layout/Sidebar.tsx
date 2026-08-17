@@ -55,7 +55,7 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="p-6 border-b border-white/8 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all duration-300">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 group-hover:scale-105 transition-all duration-300">
             <div className="w-full h-full bg-[#090c12] rounded-[10px] flex items-center justify-center text-xl">
               🐂
             </div>
@@ -90,19 +90,19 @@ export function Sidebar() {
                 "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative",
                 isActive
                   ? "bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30 shadow-sm"
-                  : "text-gray-400 hover:text-gray-100 hover:bg-white/5"
+                  : "text-gray-400 hover:text-gray-100 hover:bg-white/5 hover:translate-x-1"
               )}
             >
               <div className="flex items-center gap-3">
                 <Icon
                   className={cn(
-                    "w-4 h-4 transition-colors",
+                    "w-4 h-4 transition-all duration-200",
                     isActive
-                      ? "text-emerald-400"
-                      : "text-gray-400 group-hover:text-gray-200"
+                      ? "text-emerald-400 scale-110"
+                      : "text-gray-400 group-hover:text-emerald-300 group-hover:scale-110"
                   )}
                 />
-                <span>{item.name}</span>
+                <span className="transition-colors group-hover:text-white">{item.name}</span>
               </div>
               {item.badge && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono font-semibold">
@@ -110,7 +110,7 @@ export function Sidebar() {
                 </span>
               )}
               {isActive && (
-                <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full shadow-[0_0_8px_rgba(16,185,129,1)]" />
+                <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full shadow-[0_0_10px_rgba(16,185,129,0.9)]" />
               )}
             </Link>
           );
@@ -132,7 +132,7 @@ export function Sidebar() {
         <button
           onClick={handleManualSnapshot}
           disabled={isRefreshing}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-medium bg-[#141a24] hover:bg-[#1a2230] text-gray-300 hover:text-white border border-white/8 transition-all disabled:opacity-50 active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-medium bg-[#141a24] hover:bg-[#1a2230] text-gray-300 hover:text-white border border-white/8 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
         >
           <RefreshCw
             className={cn("w-3.5 h-3.5 text-emerald-400", isRefreshing && "animate-spin")}

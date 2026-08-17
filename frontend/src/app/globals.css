@@ -7,7 +7,7 @@
     --bg-card-hover: #141a24;
     --bg-elevated: #1a2230;
     --border-subtle: rgba(255, 255, 255, 0.07);
-    --border-highlight: rgba(255, 255, 255, 0.14);
+    --border-highlight: rgba(255, 255, 255, 0.18);
     --accent-mint: #10b981;
     --accent-mint-glow: rgba(16, 185, 129, 0.15);
     --accent-coral: #f43f5e;
@@ -41,17 +41,81 @@
   background: #2b364a;
 }
 
-/* Glassmorphic card utility */
+/* Ambient Background Motion */
+@keyframes ambientDrift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -20px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.ambient-orb-mint {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.04) 0%, rgba(16, 185, 129, 0) 70%);
+  filter: blur(60px);
+  pointer-events: none;
+  animation: ambientDrift 22s ease-in-out infinite alternate;
+}
+
+.ambient-orb-coral {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.025) 0%, rgba(244, 63, 94, 0) 70%);
+  filter: blur(60px);
+  pointer-events: none;
+  animation: ambientDrift 28s ease-in-out infinite alternate-reverse;
+}
+
+/* Glassmorphic card utility with cursor-following spotlight */
 .fintech-card {
+  position: relative;
   background: linear-gradient(180deg, rgba(17, 22, 31, 0.85) 0%, rgba(12, 16, 23, 0.95) 100%);
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
   backdrop-filter: blur(16px);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fintech-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    420px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+    rgba(16, 185, 129, 0.06),
+    transparent 65%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1;
 }
 
 .fintech-card:hover {
   border-color: var(--border-highlight);
+  transform: translateY(-2.5px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6), 0 0 20px -5px rgba(16, 185, 129, 0.05);
+}
+
+.fintech-card:hover::before {
+  opacity: 1;
 }
 
 .fintech-card-glow {
@@ -94,4 +158,20 @@
   );
   animation: shimmer 2s infinite;
   content: '';
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fintech-card:hover {
+    transform: none !important;
+  }
+  .ambient-orb-mint, .ambient-orb-coral {
+    animation: none !important;
+  }
 }

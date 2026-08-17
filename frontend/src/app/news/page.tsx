@@ -21,7 +21,7 @@ import {
   AlertTriangle,
   Zap,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 
 const POPULAR_COMPANIES = [
   "ALL",
@@ -47,6 +47,19 @@ const CATEGORY_TABS = [
   "Sector & Industry",
   "Global Markets",
 ];
+
+const newsItemVariants: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: Math.min(i * 0.03, 0.3),
+      duration: 0.3,
+      ease: "easeOut",
+    },
+  }),
+};
 
 export default function NewsPage() {
   const { success, error, info } = useToast();
@@ -231,7 +244,7 @@ export default function NewsPage() {
             {isAnyFilterActive && (
               <button
                 onClick={handleResetFilters}
-                className="flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-colors font-mono"
+                className="flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-colors font-mono hover:-translate-y-0.5 active:scale-95"
               >
                 <RotateCcw className="w-3 h-3" />
                 Reset
@@ -248,7 +261,7 @@ export default function NewsPage() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 active:scale-95 ${
                   isSelected
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold shadow-sm"
                     : "bg-white/4 text-gray-400 hover:text-gray-200 hover:bg-white/8 border border-white/5"
@@ -272,7 +285,7 @@ export default function NewsPage() {
               <button
                 key={cmp}
                 onClick={() => setSelectedCompany(cmp)}
-                className={`px-2.5 py-1 rounded-lg font-mono text-[11px] whitespace-nowrap transition-all ${
+                className={`px-2.5 py-1 rounded-lg font-mono text-[11px] whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 active:scale-95 ${
                   isSelected
                     ? "bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold shadow-sm"
                     : "bg-white/3 text-gray-400 hover:text-white border border-white/5"
@@ -351,7 +364,7 @@ export default function NewsPage() {
           </div>
         </div>
       ) : (
-        /* News Articles Grid */
+        /* News Articles Grid with Staggered Entrance */
         <motion.div
           layout
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -361,10 +374,11 @@ export default function NewsPage() {
               <motion.div
                 key={article.id || idx}
                 layout
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
+                custom={idx}
+                initial="hidden"
+                animate="visible"
                 exit={{ opacity: 0, scale: 0.96 }}
-                transition={{ duration: 0.2 }}
+                variants={newsItemVariants}
               >
                 <NewsCard
                   article={article}

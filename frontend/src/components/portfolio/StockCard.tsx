@@ -3,7 +3,6 @@
 import React from "react";
 import { HoldingItem } from "@/types/portfolio";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
-import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
@@ -159,6 +158,7 @@ export function StockCard({
           <Trash2 className="w-3.5 h-3.5" />
         </Button>
       </div>
-    </Card>
+    </div>
+  </div>
   );
 }

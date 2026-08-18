@@ -41,112 +41,137 @@
   background: #2b364a;
 }
 
-/* Ambient Background Motion */
-@keyframes ambientDrift {
-  0% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -20px) scale(1.05);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.95);
-  }
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
+
+/* =========================================================================
+   Apple-Style Liquid Glass Material (Sidebar & Header Chrome Only)
+   ========================================================================= */
+
+.apple-liquid-sidebar {
+  position: sticky;
+  top: 12px;
+  height: calc(100vh - 24px);
+  border-radius: 24px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(18, 24, 38, 0.45) 60%,
+    rgba(10, 14, 22, 0.65) 100%
+  );
+  backdrop-filter: blur(36px) saturate(200%) brightness(108%) contrast(105%);
+  -webkit-backdrop-filter: blur(36px) saturate(200%) brightness(108%) contrast(105%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 
+    0 24px 50px -10px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45),
+    inset 1px 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.6),
+    inset -1px 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
 }
 
-.ambient-orb-mint {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.04) 0%, rgba(16, 185, 129, 0) 70%);
-  filter: blur(60px);
-  pointer-events: none;
-  animation: ambientDrift 22s ease-in-out infinite alternate;
-}
-
-.ambient-orb-coral {
-  position: absolute;
-  width: 500px;
-  height: 500px;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgba(244, 63, 94, 0.025) 0%, rgba(244, 63, 94, 0) 70%);
-  filter: blur(60px);
-  pointer-events: none;
-  animation: ambientDrift 28s ease-in-out infinite alternate-reverse;
-}
-
-/* Glassmorphic card utility with cursor-following spotlight */
-.fintech-card {
-  position: relative;
-  background: linear-gradient(180deg, rgba(17, 22, 31, 0.85) 0%, rgba(12, 16, 23, 0.95) 100%);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  backdrop-filter: blur(16px);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              background 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.fintech-card::before {
+/* Liquid specular highlight sheen overlay for sidebar */
+.apple-liquid-sidebar::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 240px;
   background: radial-gradient(
-    420px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
-    rgba(16, 185, 129, 0.06),
-    transparent 65%
+    ellipse 140% 80% at 50% -20%,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0.05) 40%,
+    transparent 80%
   );
+  border-radius: 24px 24px 0 0;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
   z-index: 1;
 }
 
-.fintech-card:hover {
-  border-color: var(--border-highlight);
-  transform: translateY(-2.5px);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6), 0 0 20px -5px rgba(16, 185, 129, 0.05);
-}
-
-.fintech-card:hover::before {
-  opacity: 1;
-}
-
-/* Apple-style Translucent Frosted Glass Chrome (Sidebar & Header Only) */
-.apple-glass-sidebar {
+/* Pure neutral liquid refraction edge outline */
+.apple-liquid-sidebar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 1px;
   background: linear-gradient(
-    135deg,
-    rgba(14, 18, 27, 0.72) 0%,
-    rgba(9, 12, 18, 0.78) 50%,
-    rgba(6, 8, 13, 0.84) 100%
+    155deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.15) 35%,
+    rgba(255, 255, 255, 0.35) 70%,
+    rgba(255, 255, 255, 0.15) 100%
   );
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 
-    1px 0 28px -4px rgba(0, 0, 0, 0.5),
-    inset -1px 0 0 0 rgba(255, 255, 255, 0.04);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
 }
 
-.apple-glass-header {
+.apple-liquid-header {
+  position: sticky;
+  top: 12px;
+  border-radius: 20px;
   background: linear-gradient(
     180deg,
-    rgba(14, 18, 27, 0.72) 0%,
-    rgba(9, 12, 18, 0.80) 100%
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.03) 30%,
+    rgba(18, 24, 38, 0.45) 70%,
+    rgba(10, 14, 22, 0.65) 100%
   );
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(36px) saturate(200%) brightness(108%) contrast(105%);
+  -webkit-backdrop-filter: blur(36px) saturate(200%) brightness(108%) contrast(105%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 
-    0 4px 28px -4px rgba(0, 0, 0, 0.45),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.04),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    0 16px 40px -10px rgba(0, 0, 0, 0.70),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+/* Liquid specular highlight sheen overlay for header */
+.apple-liquid-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: radial-gradient(
+    ellipse 100% 70% at 50% -25%,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    transparent 80%
+  );
+  border-radius: 20px 20px 0 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Pure neutral liquid refraction edge outline for header */
+.apple-liquid-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.6) 25%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.6) 75%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
 }
 
 /* Shimmer animation for skeletons */

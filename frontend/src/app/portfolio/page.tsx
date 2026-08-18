@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
 import { HoldingsGrid } from "@/components/portfolio/HoldingsGrid";
@@ -13,9 +13,11 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { useLiveQuotes } from "@/lib/useLiveQuotes";
+import { QuoteItem } from "@/types/market";
 import { PortfolioSummary, HoldingItem } from "@/types/portfolio";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
-import { Briefcase, Plus, RefreshCw, Layers } from "lucide-react";
+import { Briefcase, Plus, RefreshCw, Layers, Activity } from "lucide-react";
 
 export default function PortfolioPage() {
   const { error, success } = useToast();
@@ -28,6 +30,69 @@ export default function PortfolioPage() {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedHolding, setSelectedHolding] = useState<HoldingItem | null>(null);
+
+  const holdingTickers = useMemo(() => {
+    return portfolio?.holdings?.map((h) => h.ticker) || [];
+  }, [portfolio?.holdings]);
+
+  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>) => {
+    setPortfolio((prev) => {
+      if (!prev || !prev.holdings) return prev;
+
+      let changed = false;
+      const updatedHoldings = prev.holdings.map((h) => {
+        const quote = quotesMap[h.ticker.toUpperCase()];
+        if (quote && quote.current_price !== null && quote.current_price > 0 && quote.current_price !== h.current_price) {
+          changed = true;
+          const newPrice = quote.current_price;
+          const invested = h.invested ?? h.quantity * h.average_buy_price;
+          const currentValue = h.quantity * newPrice;
+          const profit = currentValue - invested;
+          const returns = invested > 0 ? (profit / invested) * 100 : 0;
+
+          return {
+            ...h,
+            current_price: newPrice,
+            invested,
+            current_value: currentValue,
+            profit,
+            returns,
+          };
+        }
+        return h;
+      });
+
+      if (!changed) return prev;
+
+      const totalHoldings = updatedHoldings.length;
+      const totalInvested = updatedHoldings.reduce(
+        (sum, h) => sum + (h.invested ?? h.quantity * h.average_buy_price),
+        0
+      );
+      const totalCurrentValue = updatedHoldings.reduce(
+        (sum, h) => sum + (h.current_value ?? (h.current_price ? h.quantity * h.current_price : h.quantity * h.average_buy_price)),
+        0
+      );
+      const totalUnrealizedProfit = totalCurrentValue - totalInvested;
+      const totalReturnPercentage = totalInvested > 0 ? (totalUnrealizedProfit / totalInvested) * 100 : 0;
+
+      return {
+        ...prev,
+        total_holdings: totalHoldings,
+        total_invested: totalInvested,
+        total_current_value: totalCurrentValue,
+        total_unrealized_profit: totalUnrealizedProfit,
+        total_return_percentage: totalReturnPercentage,
+        holdings: updatedHoldings,
+      };
+    });
+  }, []);
+
+  const { isPolling, syncNow, lastSyncTime } = useLiveQuotes({
+    tickers: holdingTickers,
+    intervalMs: 10000,
+    onQuotesUpdated: handleQuotesUpdated,
+  });
 
   const fetchPortfolio = useCallback(async () => {
     try {
@@ -96,9 +161,15 @@ export default function PortfolioPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={fetchPortfolio} className="text-xs">
-              <RefreshCw className="w-3.5 h-3.5 mr-1" />
-              Refresh Quotes
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={syncNow}
+              disabled={isPolling}
+              className="text-xs border-white/10 hover:border-white/20"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isPolling ? "animate-spin text-emerald-400" : ""}`} />
+              {isPolling ? "Syncing..." : "Sync Quotes"}
             </Button>
             <Button variant="primary" size="sm" onClick={() => setIsAddModalOpen(true)} className="text-xs">
               <Plus className="w-4 h-4 mr-1" />

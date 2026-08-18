@@ -68,6 +68,39 @@ def test_market_quote_invalid():
     assert response.status_code == 404
 
 
+def test_market_status_endpoint():
+    response = client.get("/api/market/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert "is_open" in data
+    assert "status" in data
+    assert "current_time_ist" in data
+    assert "timezone" in data
+
+
+def test_batch_quotes_post_endpoint():
+    response = client.post("/api/quotes/batch", json={"tickers": ["TCS", "INFY", "^NSEI"]})
+    assert response.status_code == 200
+    data = response.json()
+    assert "quotes" in data
+    assert "market_status" in data
+    quotes = data["quotes"]
+    assert "TCS" in quotes
+    assert "INFY" in quotes
+    assert quotes["TCS"]["current_price"] is not None
+    assert quotes["TCS"]["current_price"] > 0
+
+
+def test_batch_quotes_get_endpoint():
+    response = client.get("/api/quotes/batch?symbols=TCS,INFY")
+    assert response.status_code == 200
+    data = response.json()
+    assert "quotes" in data
+    quotes = data["quotes"]
+    assert "TCS" in quotes
+    assert "INFY" in quotes
+
+
 if __name__ == "__main__":
     test_root_endpoint()
     test_portfolio_summary_endpoint()
@@ -76,4 +109,8 @@ if __name__ == "__main__":
     test_realized_profit_endpoint()
     test_market_quote_valid()
     test_market_quote_invalid()
+    test_market_status_endpoint()
+    test_batch_quotes_post_endpoint()
+    test_batch_quotes_get_endpoint()
     print("All backend API tests passed successfully!")
+

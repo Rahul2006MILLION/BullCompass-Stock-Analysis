@@ -41,6 +41,10 @@ from app.api.schemas import (
     InvestmentDecisionResponse,
     ComprehensiveResearchResponse,
     MessageResponse,
+    BatchQuotesRequest,
+    QuoteItemResponse,
+    MarketStatusResponse,
+    BatchQuotesResponse,
 )
 
 router = APIRouter(prefix="/api", tags=["portfolio"])
@@ -687,6 +691,69 @@ def get_company_research(ticker: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch research report for {clean_ticker}: {str(e)}",
         )
+
+
+# -------------------------------------------------------------------------
+# Live Quotes & Market Hours Endpoints
+# -------------------------------------------------------------------------
+
+@router.get("/market/status", response_model=MarketStatusResponse)
+def get_market_status():
+    """
+    Get current Indian stock market operational status (OPEN / CLOSED / PRE_OPEN / POST_CLOSE).
+    """
+    try:
+        service = get_stock_service()
+        status_info = service.is_indian_market_open()
+        return MarketStatusResponse(**status_info)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch market status: {str(e)}",
+        )
+
+
+@router.post("/quotes/batch", response_model=BatchQuotesResponse)
+def get_batch_quotes_post(payload: BatchQuotesRequest):
+    """
+    Fetch lightweight live quotes for a batch of tickers simultaneously in ~1 network call.
+    """
+    try:
+        service = get_stock_service()
+        quotes_dict = service.get_batch_quotes(payload.tickers)
+        market_status = service.is_indian_market_open()
+
+        quote_items = {}
+        for ticker, q in quotes_dict.items():
+            quote_items[ticker] = QuoteItemResponse(
+                ticker=q.get("ticker", ticker),
+                resolved_ticker=q.get("resolved_ticker", ticker),
+                current_price=q.get("current_price"),
+                previous_close=q.get("previous_close"),
+                change=q.get("change"),
+                change_percent=q.get("change_percent"),
+                timestamp=q.get("timestamp", ""),
+            )
+
+        return BatchQuotesResponse(
+            quotes=quote_items,
+            market_status=MarketStatusResponse(**market_status),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch batch quotes: {str(e)}",
+        )
+
+
+@router.get("/quotes/batch", response_model=BatchQuotesResponse)
+def get_batch_quotes_get(symbols: Optional[str] = None):
+    """
+    Fetch lightweight live quotes via GET with comma-separated symbols query parameter.
+    e.g. /api/quotes/batch?symbols=TCS,INFY,^NSEI,^BSESN
+    """
+    ticker_list = [s.strip() for s in symbols.split(",") if s.strip()] if symbols else []
+    return get_batch_quotes_post(BatchQuotesRequest(tickers=ticker_list))
 
 
 # -------------------------------------------------------------------------

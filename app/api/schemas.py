@@ -268,3 +268,32 @@ class WatchlistResponse(BaseModel):
 class MessageResponse(BaseModel):
     status: str
     message: str
+
+
+# --- Live Batch Quotes & Market Status Schemas ---
+
+class BatchQuotesRequest(BaseModel):
+    tickers: List[str] = Field(..., description="List of stock symbols to fetch quotes for", example=["TCS", "INFY", "^NSEI"])
+
+
+class QuoteItemResponse(BaseModel):
+    ticker: str
+    resolved_ticker: str
+    current_price: Optional[float] = None
+    previous_close: Optional[float] = None
+    change: Optional[float] = None
+    change_percent: Optional[float] = None
+    timestamp: str
+
+
+class MarketStatusResponse(BaseModel):
+    is_open: bool
+    status: str
+    current_time_ist: str
+    timezone: str
+
+
+class BatchQuotesResponse(BaseModel):
+    quotes: Dict[str, QuoteItemResponse]
+    market_status: MarketStatusResponse
+

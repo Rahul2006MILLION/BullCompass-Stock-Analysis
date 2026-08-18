@@ -82,35 +82,17 @@ class WatchlistService:
             self.normalize_ticker(h.ticker) for h in self.portfolio_repo.get_holdings()
         }
 
+        tickers = [item.ticker for item in items]
+        quotes_map = self.stock_service.get_batch_quotes(tickers)
+
         results = []
         for item in items:
-            resolved = TickerService.resolve(item.ticker)
-            current_price = None
-            change = None
-            change_percent = None
-
-            try:
-                stock = yf.Ticker(resolved)
-                info = stock.info or {}
-                if isinstance(info, dict):
-                    current_price = (
-                        info.get("currentPrice")
-                        or info.get("regularMarketPrice")
-                        or info.get("previousClose")
-                    )
-                    prev_close = (
-                        info.get("previousClose")
-                        or info.get("regularMarketPreviousClose")
-                    )
-
-                    if current_price and prev_close and prev_close > 0:
-                        change = float(current_price) - float(prev_close)
-                        change_percent = (change / float(prev_close)) * 100.0
-
-                if current_price is None:
-                    current_price = self.stock_service.get_current_price(resolved)
-            except Exception:
-                pass
+            clean_ticker = item.ticker.strip().upper()
+            quote = quotes_map.get(clean_ticker, {})
+            resolved = quote.get("resolved_ticker") or TickerService.resolve(item.ticker)
+            current_price = quote.get("current_price")
+            change = quote.get("change", 0.0)
+            change_percent = quote.get("change_percent", 0.0)
 
             results.append(
                 {

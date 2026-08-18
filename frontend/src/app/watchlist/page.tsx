@@ -11,6 +11,8 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { useLiveQuotes } from "@/lib/useLiveQuotes";
+import { QuoteItem } from "@/types/market";
 import { WatchlistItem } from "@/types/watchlist";
 import { HoldingItem } from "@/types/portfolio";
 import {
@@ -23,13 +25,13 @@ import {
   TrendingDown,
   Layers,
   AlertCircle,
+  Activity,
 } from "lucide-react";
 
 export default function WatchlistPage() {
   const { error, success } = useToast();
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,20 +42,48 @@ export default function WatchlistPage() {
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [selectedBuyHolding, setSelectedBuyHolding] = useState<HoldingItem | null>(null);
 
-  const fetchWatchlist = useCallback(async (isManualRefresh = false) => {
+  const watchlistTickers = useMemo(() => {
+    return items.map((i) => i.ticker);
+  }, [items]);
+
+  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>) => {
+    setItems((prevItems) => {
+      if (!prevItems || prevItems.length === 0) return prevItems;
+
+      let changed = false;
+      const updated = prevItems.map((item) => {
+        const quote = quotesMap[item.ticker.toUpperCase()];
+        if (quote && quote.current_price !== null && quote.current_price > 0 && quote.current_price !== item.current_price) {
+          changed = true;
+          return {
+            ...item,
+            current_price: quote.current_price,
+            change: quote.change ?? item.change,
+            change_percent: quote.change_percent ?? item.change_percent,
+          };
+        }
+        return item;
+      });
+
+      return changed ? updated : prevItems;
+    });
+  }, []);
+
+  const { isPolling, syncNow, lastSyncTime } = useLiveQuotes({
+    tickers: watchlistTickers,
+    intervalMs: 10000,
+    onQuotesUpdated: handleQuotesUpdated,
+  });
+
+  const fetchWatchlist = useCallback(async () => {
     try {
-      if (isManualRefresh) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
-      }
+      setIsLoading(true);
       const response = await api.getWatchlist();
       setItems(response.items || []);
     } catch (err: any) {
       error("Connection Error", err?.message || "Failed to load watchlist data.");
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   }, [error]);
 
@@ -137,16 +167,16 @@ export default function WatchlistPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchWatchlist(true)}
-              disabled={isLoading || isRefreshing}
+              onClick={syncNow}
+              disabled={isPolling}
               className="bg-[#141a24]/90 hover:bg-[#1a2230] border-white/[0.08] hover:border-white/[0.15] text-gray-300 text-xs shadow-sm"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 mr-2 text-emerald-400 ${
-                  isRefreshing ? "animate-spin" : ""
+                  isPolling ? "animate-spin" : ""
                 }`}
               />
-              {isRefreshing ? "Refreshing..." : "Refresh Quotes"}
+              {isPolling ? "Syncing..." : "Sync Quotes"}
             </Button>
 
             <Button

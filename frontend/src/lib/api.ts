@@ -7,7 +7,7 @@ import {
   UpdateHoldingPayload,
 } from "@/types/portfolio";
 import { Transaction } from "@/types/transaction";
-import { CompanyQuote, AIAnalysisResult } from "@/types/market";
+import { CompanyQuote, AIAnalysisResult, BatchQuotesResponse, MarketStatus } from "@/types/market";
 import {
   NewsItem,
   NewsListResponse,
@@ -114,6 +114,17 @@ export const api = {
   },
 
   // Market & Comprehensive AI Research
+  getBatchQuotes: (tickers: string[]): Promise<BatchQuotesResponse> => {
+    return fetchJson<BatchQuotesResponse>("/api/quotes/batch", {
+      method: "POST",
+      body: JSON.stringify({ tickers }),
+    });
+  },
+
+  getMarketStatus: (): Promise<MarketStatus> => {
+    return fetchJson<MarketStatus>("/api/market/status");
+  },
+
   getCompanyQuote: (ticker: string): Promise<CompanyQuote> => {
     return fetchJson<CompanyQuote>(`/api/market/quote/${encodeURIComponent(ticker)}`);
   },

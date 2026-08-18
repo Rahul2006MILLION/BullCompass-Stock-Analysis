@@ -38,37 +38,25 @@ class PortfolioAgent:
         """
         Return every holding together with live market calculations.
         """
+        holdings = self.repository.get_holdings()
+        if not holdings:
+            return []
+
+        tickers = [h.ticker for h in holdings]
+        quotes_map = self.stock_service.get_batch_quotes(tickers)
 
         portfolio = []
+        for holding in holdings:
+            clean_ticker = holding.ticker.strip().upper()
+            quote = quotes_map.get(clean_ticker, {})
+            current_price = quote.get("current_price")
 
-        for holding in self.repository.get_holdings():
-
-            try:
-
-                current_price = self.stock_service.get_current_price(
-                    holding.ticker + ".NS"
-                )
-
-                invested = (
-                    holding.quantity
-                    * holding.average_buy_price
-                )
-
-                current_value = (
-                    holding.quantity
-                    * current_price
-                )
-
+            if current_price is not None and current_price > 0:
+                invested = holding.quantity * holding.average_buy_price
+                current_value = holding.quantity * current_price
                 profit = current_value - invested
-
-                returns = (
-                    (profit / invested) * 100
-                    if invested > 0
-                    else 0
-                )
-
-            except Exception:
-
+                returns = (profit / invested) * 100 if invested > 0 else 0
+            else:
                 current_price = None
                 invested = None
                 current_value = None

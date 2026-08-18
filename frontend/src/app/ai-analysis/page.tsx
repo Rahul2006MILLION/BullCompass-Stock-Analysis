@@ -20,6 +20,7 @@ import {
   Sparkles,
   Search,
   AlertTriangle,
+  AlertCircle,
   Compass,
   ShoppingCart,
   Copy,
@@ -44,6 +45,7 @@ function AIAnalysisContent() {
   const { error, success } = useToast();
   const [ticker, setTicker] = useState("");
   const [report, setReport] = useState<ComprehensiveResearchReport | null>(null);
+  const [notFoundTicker, setNotFoundTicker] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
@@ -57,15 +59,25 @@ function AIAnalysisContent() {
   }, [searchParams]);
 
   const handleAnalyze = async (stockTicker: string) => {
-    if (!stockTicker.trim()) return;
+    const cleanTicker = stockTicker.trim().toUpperCase();
+    if (!cleanTicker) return;
     try {
       setIsLoading(true);
+      setNotFoundTicker(null);
       setReport(null);
-      const data = await api.getResearchReport(stockTicker.trim().toUpperCase());
+      const data = await api.getResearchReport(cleanTicker);
+      if (!data || !data.company_name || data.current_price <= 0) {
+        setReport(null);
+        setNotFoundTicker(cleanTicker);
+        return;
+      }
       setReport(data);
-      success("Research Complete", `Generated comprehensive investment report for ${stockTicker.toUpperCase()}`);
+      setNotFoundTicker(null);
+      success("Research Complete", `Generated comprehensive investment report for ${cleanTicker}`);
     } catch (err: any) {
-      error("Research Failed", err?.message || "Could not complete fundamental analysis.");
+      setReport(null);
+      setNotFoundTicker(cleanTicker);
+      error("Research Failed", err?.message || `We couldn't find a listed stock matching '${cleanTicker}'.`);
     } finally {
       setIsLoading(false);
     }
@@ -158,6 +170,25 @@ function AIAnalysisContent() {
               Pulls multi-year audited statements → Computes 3Y CAGRs & margins → Evaluates solvency & valuation multiples → Computes deterministic Quality Score → Synthesizes institutional thesis via Ollama.
             </p>
           </div>
+        </Card>
+      )}
+
+      {/* Stock Not Found State */}
+      {notFoundTicker && !report && !isLoading && (
+        <Card className="p-8 bg-[#0e1420] border-rose-500/30 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-rose-500 opacity-80" />
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-3.5">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h3 className="text-xl font-bold text-white tracking-tight">
+            Stock Not Found
+          </h3>
+          <p className="text-sm text-gray-300 mt-2 max-w-md mx-auto">
+            We couldn&apos;t find a listed stock matching &apos;<span className="font-mono font-semibold text-rose-400">{notFoundTicker}</span>&apos;.
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Please check the ticker/company name and try again.
+          </p>
         </Card>
       )}
 

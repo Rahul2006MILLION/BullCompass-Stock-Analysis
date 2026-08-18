@@ -638,10 +638,18 @@ def analyze_company_research(payload: AIAnalyzeRequest):
     Run the complete institutional investment research engine:
     Deterministic multi-year statements, ratios, trends, 0-100 scoring, decision tiering, and Ollama synthesis.
     """
+    clean_ticker = payload.ticker.strip().upper()
     try:
         coordinator = get_research_coordinator()
-        report = coordinator.generate_research_report(payload.ticker)
+        report = coordinator.generate_research_report(clean_ticker)
         return _serialize_report(report)
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(ve),
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -654,14 +662,22 @@ def get_company_research(ticker: str):
     """
     GET shortcut to generate or retrieve comprehensive fundamental research report.
     """
+    clean_ticker = ticker.strip().upper()
     try:
         coordinator = get_research_coordinator()
-        report = coordinator.generate_research_report(ticker)
+        report = coordinator.generate_research_report(clean_ticker)
         return _serialize_report(report)
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(ve),
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch research report for {ticker}: {str(e)}",
+            detail=f"Failed to fetch research report for {clean_ticker}: {str(e)}",
         )
 
 
@@ -674,30 +690,37 @@ def get_company_quote(ticker: str):
     """
     Fetch live market quote and company metadata via StockService / yfinance.
     """
+    clean_ticker = ticker.strip().upper()
     try:
         service = get_stock_service()
-        info = service.get_company_info(ticker)
-        current_price = info.current_price
-        if current_price == 0.0:
-            try:
-                current_price = service.get_current_price(ticker)
-            except Exception:
-                current_price = 0.0
+        info = service.get_company_info(clean_ticker)
+        if not info.name or info.current_price <= 0.0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"We couldn't find a listed stock matching '{clean_ticker}'.",
+            )
 
         return CompanyQuoteResponse(
             ticker=info.ticker,
-            name=info.name or info.ticker,
+            name=info.name,
             sector=info.sector or "N/A",
             industry=info.industry or "N/A",
             country=info.country or "India",
             currency=info.currency or "INR",
             market_cap=info.market_cap or 0,
-            current_price=current_price,
+            current_price=info.current_price,
+        )
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"We couldn't find a listed stock matching '{clean_ticker}'.",
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Failed to fetch quote for {ticker}: {str(e)}",
+            detail=f"We couldn't find a listed stock matching '{clean_ticker}'.",
         )
 
 
@@ -706,13 +729,21 @@ def analyze_stock(payload: AIAnalyzeRequest):
     """
     Perform deep AI analysis using DecisionAgent and Ollama.
     """
+    clean_ticker = payload.ticker.strip().upper()
     try:
         agent = get_decision_agent()
-        report = agent.generate_full_research_report(payload.ticker)
+        report = agent.generate_full_research_report(clean_ticker)
         return AIAnalysisResponse(
-            ticker=payload.ticker.upper(),
+            ticker=clean_ticker,
             company_name=report.company_name,
             analysis=report.ai_thesis_report,
+        )
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(ve),
         )
     except Exception as e:
         raise HTTPException(

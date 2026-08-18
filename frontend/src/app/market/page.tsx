@@ -21,6 +21,7 @@ import {
   IndianRupee,
   ShoppingCart,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -40,17 +41,29 @@ export function MarketPage() {
   const { error } = useToast();
   const [tickerQuery, setTickerQuery] = useState("");
   const [quote, setQuote] = useState<CompanyQuote | null>(null);
+  const [notFoundSymbol, setNotFoundSymbol] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
   const handleSearchQuote = async (symbol: string) => {
-    if (!symbol.trim()) return;
+    const cleanSymbol = symbol.trim().toUpperCase();
+    if (!cleanSymbol) return;
     try {
       setIsLoading(true);
-      const data = await api.getCompanyQuote(symbol.trim().toUpperCase());
+      setNotFoundSymbol(null);
+      setQuote(null);
+      const data = await api.getCompanyQuote(cleanSymbol);
+      if (!data || !data.name || data.current_price <= 0) {
+        setQuote(null);
+        setNotFoundSymbol(cleanSymbol);
+        return;
+      }
       setQuote(data);
+      setNotFoundSymbol(null);
     } catch (err: any) {
-      error("Lookup Failed", err?.message || `Could not fetch quote for ${symbol}`);
+      setQuote(null);
+      setNotFoundSymbol(cleanSymbol);
+      error("Stock Not Found", err?.message || `We couldn't find a listed stock matching '${cleanSymbol}'.`);
     } finally {
       setIsLoading(false);
     }
@@ -122,8 +135,33 @@ export function MarketPage() {
           </Card>
         </motion.div>
 
+        {/* Stock Not Found State */}
+        {notFoundSymbol && !quote && !isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Card className="p-8 bg-[#0e1420] border-rose-500/30 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-rose-500 opacity-80" />
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-3.5">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-white tracking-tight">
+                Stock Not Found
+              </h3>
+              <p className="text-sm text-gray-300 mt-2 max-w-md mx-auto">
+                We couldn&apos;t find a listed stock matching &apos;<span className="font-mono font-semibold text-rose-400">{notFoundSymbol}</span>&apos;.
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Please check the ticker/company name and try again.
+              </p>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Quote Result Card */}
-        {quote && (
+        {quote && quote.current_price > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

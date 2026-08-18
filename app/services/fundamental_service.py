@@ -62,6 +62,24 @@ class FundamentalDataService:
         stock = yf.Ticker(resolved_ticker)
 
         info = stock.info or {}
+        if not isinstance(info, dict):
+            info = {}
+
+        name = info.get("longName") or info.get("shortName") or ""
+        current_price = _safe_float(info.get("currentPrice")) or _safe_float(info.get("regularMarketPrice")) or _safe_float(info.get("previousClose")) or 0.0
+
+        if current_price <= 0.0:
+            try:
+                hist = stock.history(period="1d")
+                if not hist.empty:
+                    current_price = float(hist["Close"].iloc[-1])
+            except Exception:
+                current_price = 0.0
+
+        # Validate that the company actually exists and has valid market data
+        if not name or current_price <= 0.0:
+            raise ValueError(f"We couldn't find a listed stock matching '{ticker}'.")
+
         sector = info.get("sector", "")
         industry = info.get("industry", "")
         is_bank = (
@@ -85,11 +103,11 @@ class FundamentalDataService:
         company_meta = {
             "ticker": ticker.upper(),
             "resolved_ticker": resolved_ticker,
-            "name": info.get("longName") or info.get("shortName") or ticker.upper(),
+            "name": name,
             "sector": sector or "Unknown Sector",
             "industry": industry or "Unknown Industry",
             "currency": info.get("currency", "INR"),
-            "current_price": _safe_float(info.get("currentPrice")) or _safe_float(info.get("regularMarketPrice")) or 0.0,
+            "current_price": current_price,
             "market_cap_cr": _to_cr(_safe_float(info.get("marketCap"))) or 0.0,
             "is_bank": is_bank,
         }

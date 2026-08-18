@@ -20,10 +20,25 @@ class TickerService:
     @staticmethod
     def is_valid(symbol: str) -> bool:
         try:
-            ticker = yf.Ticker(symbol)
-            info = ticker.info
+            resolved = TickerService.resolve(symbol)
+            ticker = yf.Ticker(resolved)
+            info = ticker.info or {}
 
-            return bool(info.get("longName"))
+            if not info or not isinstance(info, dict):
+                return False
+
+            has_name = bool(info.get("longName") or info.get("shortName"))
+            has_price = bool(
+                info.get("currentPrice")
+                or info.get("regularMarketPrice")
+                or info.get("previousClose")
+                or info.get("open")
+            )
+            if has_name and has_price:
+                return True
+
+            hist = ticker.history(period="1d")
+            return not hist.empty
 
         except Exception:
             return False

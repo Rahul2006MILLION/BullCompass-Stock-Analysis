@@ -118,10 +118,10 @@ export default function WatchlistPage() {
 
       <div className="space-y-6">
         {/* Page Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/8 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.05] pb-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <Star className="w-4 h-4 fill-emerald-400/20" />
               </div>
               <h1 className="text-2xl font-bold text-white tracking-tight">
@@ -139,7 +139,7 @@ export default function WatchlistPage() {
               size="sm"
               onClick={() => fetchWatchlist(true)}
               disabled={isLoading || isRefreshing}
-              className="bg-[#0e131d] border-white/10 hover:border-white/20 text-gray-300 text-xs"
+              className="bg-[#141a24]/90 hover:bg-[#1a2230] border-white/[0.08] hover:border-white/[0.15] text-gray-300 text-xs shadow-sm"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 mr-2 text-emerald-400 ${
@@ -153,7 +153,7 @@ export default function WatchlistPage() {
               variant="primary"
               size="sm"
               onClick={() => setIsAddModalOpen(true)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-xs shadow-lg shadow-emerald-500/20"
+              className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs shadow-lg shadow-emerald-500/20"
             >
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add Stock
@@ -164,57 +164,65 @@ export default function WatchlistPage() {
         {/* Overview Stat Badges */}
         {items.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-[#0d121a]/95 p-4 rounded-xl border border-white/8 flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                  Total Tracked
-                </span>
-                <p className="text-xl font-bold text-white font-mono">{metrics.total}</p>
-              </div>
-              <div className="p-2 rounded-lg bg-white/5 text-gray-300">
-                <Layers className="w-4 h-4" />
-              </div>
-            </div>
-
-            <div className="bg-[#0d121a]/95 p-4 rounded-xl border border-white/8 flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                  Today Gainers
-                </span>
-                <p className="text-xl font-bold text-emerald-400 font-mono">
-                  {metrics.gainers}
-                </p>
-              </div>
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
-                <TrendingUp className="w-4 h-4" />
+            <div className="liquid-metric-shell">
+              <div className="liquid-metric-inner flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">
+                    Total Tracked
+                  </span>
+                  <p className="text-xl font-bold text-white font-mono">{metrics.total}</p>
+                </div>
+                <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-gray-300">
+                  <Layers className="w-4 h-4" />
+                </div>
               </div>
             </div>
 
-            <div className="bg-[#0d121a]/95 p-4 rounded-xl border border-white/8 flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                  Today Losers
-                </span>
-                <p className="text-xl font-bold text-rose-400 font-mono">
-                  {metrics.losers}
-                </p>
-              </div>
-              <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400">
-                <TrendingDown className="w-4 h-4" />
+            <div className="liquid-metric-shell">
+              <div className="liquid-metric-inner flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">
+                    Today Gainers
+                  </span>
+                  <p className="text-xl font-bold text-emerald-400 font-mono">
+                    {metrics.gainers}
+                  </p>
+                </div>
+                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
               </div>
             </div>
 
-            <div className="bg-[#0d121a]/95 p-4 rounded-xl border border-white/8 flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                  In Portfolio
-                </span>
-                <p className="text-xl font-bold text-teal-400 font-mono">
-                  {metrics.owned}
-                </p>
+            <div className="liquid-metric-shell">
+              <div className="liquid-metric-inner flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">
+                    Today Losers
+                  </span>
+                  <p className="text-xl font-bold text-rose-400 font-mono">
+                    {metrics.losers}
+                  </p>
+                </div>
+                <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                  <TrendingDown className="w-4 h-4" />
+                </div>
               </div>
-              <div className="p-2 rounded-lg bg-teal-500/10 text-teal-400">
-                <Briefcase className="w-4 h-4" />
+            </div>
+
+            <div className="liquid-metric-shell">
+              <div className="liquid-metric-inner flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">
+                    In Portfolio
+                  </span>
+                  <p className="text-xl font-bold text-teal-400 font-mono">
+                    {metrics.owned}
+                  </p>
+                </div>
+                <div className="p-2 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                  <Briefcase className="w-4 h-4" />
+                </div>
               </div>
             </div>
           </div>
@@ -222,7 +230,7 @@ export default function WatchlistPage() {
 
         {/* Filter & Search Bar */}
         {items.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0d121a]/70 p-3 rounded-xl border border-white/5">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0d121a]/90 p-3 rounded-2xl border border-white/[0.06] shadow-sm">
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
               <Input
@@ -230,7 +238,7 @@ export default function WatchlistPage() {
                 placeholder="Search watchlist symbols..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-[#141a24] border-white/8 text-xs text-white"
+                className="pl-9 bg-[#141a24] border-white/[0.08] focus:border-emerald-500/30 text-xs text-white rounded-xl"
               />
             </div>
 
@@ -247,10 +255,10 @@ export default function WatchlistPage() {
                 <button
                   key={tab.key}
                   onClick={() => setFilterMode(tab.key)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                     filterMode === tab.key
-                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                      : "text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent"
+                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold"
+                      : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04] border border-transparent"
                   }`}
                 >
                   {tab.label}

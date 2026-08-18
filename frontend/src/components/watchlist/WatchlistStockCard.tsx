@@ -5,7 +5,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { WatchlistItem } from "@/types/watchlist";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
-import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
@@ -38,17 +37,16 @@ export function WatchlistStockCard({
   const isPositive = change >= 0;
 
   return (
-    <Card
-      className="group transition-all duration-300 bg-[#0d121a]/95 hover:bg-[#111724] border-white/8 hover:border-white/20 relative overflow-hidden flex flex-col justify-between"
-    >
-      {/* Top subtle glow on hover */}
-      <div
-        className={`absolute top-0 left-0 right-0 h-[2px] transition-opacity duration-300 opacity-0 group-hover:opacity-100 ${
-          isPositive ? "bg-emerald-500/60" : "bg-rose-500/60"
-        }`}
-      />
+    <div className="liquid-card-shell group flex flex-col justify-between h-full">
+      <div className="liquid-card-inner !p-0 flex flex-col justify-between h-full overflow-hidden">
+        {/* Top subtle glow on hover */}
+        <div
+          className={`absolute top-0 left-0 right-0 h-[2px] transition-opacity duration-300 opacity-0 group-hover:opacity-100 ${
+            isPositive ? "bg-emerald-500/60" : "bg-rose-500/60"
+          }`}
+        />
 
-      <div className="p-5">
+        <div className="p-5">
         {/* Header: Company Name, Ticker, Badges & Remove Button */}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="space-y-1 min-w-0">
@@ -150,17 +148,18 @@ export function WatchlistStockCard({
           <ShoppingCart className="w-3.5 h-3.5 mr-1.5" />
           Buy
         </Button>
-        <Link href={`/ai-analysis?ticker=${encodeURIComponent(item.ticker)}`} className="flex-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full bg-transparent hover:bg-white/5 border border-white/8 hover:border-white/15 text-gray-300 hover:text-emerald-300 text-xs font-semibold py-1.5 transition-all duration-200"
-          >
-            <Bot className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
-            AI Research
-          </Button>
-        </Link>
+          <Link href={`/ai-analysis?ticker=${encodeURIComponent(item.ticker)}`} className="flex-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full bg-transparent hover:bg-white/5 border border-white/8 hover:border-white/15 text-gray-300 hover:text-emerald-300 text-xs font-semibold py-1.5 transition-all duration-200"
+            >
+              <Bot className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
+              AI Research
+            </Button>
+          </Link>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }

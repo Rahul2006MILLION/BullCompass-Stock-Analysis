@@ -1,3 +1,5 @@
+from typing import Optional, List
+from datetime import datetime, timedelta
 from app.database.database import Database
 from app.models.portfolio_history import PortfolioHistory
 
@@ -15,15 +17,6 @@ class PortfolioHistoryRepository:
         profit: float,
         return_percentage: float,
     ):
-
-        print("=" * 50)
-        print("Saving Portfolio Snapshot")
-        print("Timestamp:", timestamp)
-        print("Invested:", invested_amount)
-        print("Net Worth:", net_worth)
-        print("Profit:", profit)
-        print("Return %:", return_percentage)
-        print("=" * 50)
 
         cursor = self.db.connection.cursor()
 
@@ -50,10 +43,7 @@ class PortfolioHistoryRepository:
 
         self.db.connection.commit()
 
-        print("Snapshot Saved!")
-
-    def get_history(self):
-
+    def get_history(self, range_str: Optional[str] = None) -> List[PortfolioHistory]:
         cursor = self.db.connection.cursor()
 
         cursor.execute(
@@ -66,27 +56,47 @@ class PortfolioHistoryRepository:
                 profit,
                 return_percentage
             FROM portfolio_history
-            ORDER BY timestamp
+            ORDER BY timestamp ASC
             """
         )
 
         rows = cursor.fetchall()
 
-        history = []
-
-        for row in rows:
-
-            history.append(
-
-                PortfolioHistory(
-                    id=row[0],
-                    timestamp=row[1],
-                    invested_amount=row[2],
-                    net_worth=row[3],
-                    profit=row[4],
-                    return_percentage=row[5],
-                )
-
+        history = [
+            PortfolioHistory(
+                id=row[0],
+                timestamp=row[1],
+                invested_amount=row[2],
+                net_worth=row[3],
+                profit=row[4],
+                return_percentage=row[5],
             )
+            for row in rows
+        ]
 
-        return history
+        if not history or not range_str or range_str.upper() == "ALL":
+            return history
+
+        range_clean = range_str.upper()
+        days_map = {"1W": 7, "1M": 30, "3M": 90}
+        days = days_map.get(range_clean)
+        if not days:
+            return history
+
+        parsed = []
+        for item in history:
+            try:
+                dt = datetime.strptime(item.timestamp, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                try:
+                    dt = datetime.fromisoformat(item.timestamp)
+                except Exception:
+                    dt = datetime.now()
+            parsed.append((dt, item))
+
+        latest_dt = max(dt for dt, _ in parsed)
+        ref_dt = max(datetime.now(), latest_dt)
+        cutoff = ref_dt - timedelta(days=days)
+
+        filtered = [item for dt, item in parsed if dt >= cutoff]
+        return filtered if filtered else [history[-1]]

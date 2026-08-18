@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -8,7 +8,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
 import { PortfolioHistorySnapshot } from "@/types/portfolio";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
@@ -18,8 +17,97 @@ interface NetWorthAreaChartProps {
   isLoading?: boolean;
 }
 
+function parseSnapshotDate(ts: string): Date {
+  if (!ts) return new Date();
+  const normalized = ts.includes("T") ? ts : ts.replace(" ", "T");
+  const d = new Date(normalized);
+  if (!isNaN(d.getTime())) return d;
+  const fallback = new Date(ts);
+  return isNaN(fallback.getTime()) ? new Date() : fallback;
+}
+
 export function NetWorthAreaChart({ data, isLoading = false }: NetWorthAreaChartProps) {
   const [timeRange, setTimeRange] = useState<"1W" | "1M" | "3M" | "ALL">("ALL");
+
+  const filteredSnapshots = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    if (timeRange === "ALL") return data;
+
+    const daysMap: Record<"1W" | "1M" | "3M", number> = {
+      "1W": 7,
+      "1M": 30,
+      "3M": 90,
+    };
+
+    const days = daysMap[timeRange];
+    if (!days) return data;
+
+    const parsed = data
+      .map((item) => ({
+        item,
+        time: parseSnapshotDate(item.timestamp).getTime(),
+      }))
+      .filter((p) => !isNaN(p.time));
+
+    if (parsed.length === 0) return data;
+
+    const latestTime = Math.max(...parsed.map((p) => p.time));
+    const refTime = Math.max(Date.now(), latestTime);
+    const cutoff = refTime - days * 24 * 60 * 60 * 1000;
+
+    const matched = parsed.filter((p) => p.time >= cutoff).map((p) => p.item);
+
+    if (matched.length === 0 && data.length > 0) {
+      return [data[data.length - 1]];
+    }
+
+    return matched;
+  }, [data, timeRange]);
+
+  const formattedData = useMemo(() => {
+    if (!filteredSnapshots || filteredSnapshots.length === 0) return [];
+
+    const dateCounts: Record<string, number> = {};
+    filteredSnapshots.forEach((item) => {
+      const d = parseSnapshotDate(item.timestamp);
+      if (!isNaN(d.getTime())) {
+        const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        dateCounts[dayKey] = (dateCounts[dayKey] || 0) + 1;
+      }
+    });
+    const hasSameDayMulti = Object.values(dateCounts).some((count) => count > 1);
+
+    return filteredSnapshots.map((item) => {
+      const d = parseSnapshotDate(item.timestamp);
+      let dateLabel = item.timestamp;
+
+      if (!isNaN(d.getTime())) {
+        if (timeRange === "1W" || hasSameDayMulti) {
+          dateLabel = d.toLocaleDateString("en-IN", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          });
+        } else {
+          dateLabel = d.toLocaleDateString("en-IN", {
+            month: "short",
+            day: "numeric",
+          });
+        }
+      }
+
+      return {
+        timestamp: item.timestamp,
+        dateLabel,
+        netWorth: item.net_worth,
+        invested: item.invested_amount,
+        profit: item.profit,
+        returnPercentage: item.return_percentage,
+      };
+    });
+  }, [filteredSnapshots, timeRange]);
 
   if (isLoading) {
     return (
@@ -39,23 +127,6 @@ export function NetWorthAreaChart({ data, isLoading = false }: NetWorthAreaChart
       </div>
     );
   }
-
-  // Format data for chart
-  const formattedData = data.map((item) => {
-    const d = new Date(item.timestamp);
-    const dateLabel = !isNaN(d.getTime())
-      ? d.toLocaleDateString("en-IN", { month: "short", day: "numeric" })
-      : item.timestamp;
-
-    return {
-      timestamp: item.timestamp,
-      dateLabel,
-      netWorth: item.net_worth,
-      invested: item.invested_amount,
-      profit: item.profit,
-      returnPercentage: item.return_percentage,
-    };
-  });
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -148,10 +219,12 @@ export function NetWorthAreaChart({ data, isLoading = false }: NetWorthAreaChart
               name="Net Worth"
               stroke="#10b981"
               strokeWidth={2.5}
+              dot={{ r: 3.5, fill: "#10b981", strokeWidth: 1.5, stroke: "#0b0f17" }}
+              activeDot={{ r: 5.5, fill: "#10b981", stroke: "#ffffff", strokeWidth: 2 }}
               fillOpacity={1}
               fill="url(#netWorthGradient)"
               isAnimationActive={true}
-              animationDuration={850}
+              animationDuration={500}
               animationEasing="ease-out"
             />
             <Area
@@ -161,10 +234,11 @@ export function NetWorthAreaChart({ data, isLoading = false }: NetWorthAreaChart
               stroke="#60a5fa"
               strokeWidth={1.5}
               strokeDasharray="4 4"
+              dot={false}
               fillOpacity={1}
               fill="url(#investedGradient)"
               isAnimationActive={true}
-              animationDuration={850}
+              animationDuration={500}
               animationEasing="ease-out"
             />
           </AreaChart>
@@ -173,3 +247,4 @@ export function NetWorthAreaChart({ data, isLoading = false }: NetWorthAreaChart
     </div>
   );
 }
+

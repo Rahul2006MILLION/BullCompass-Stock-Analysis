@@ -293,13 +293,13 @@ def sell_stock(payload: SellStockRequest):
 # -------------------------------------------------------------------------
 
 @router.get("/portfolio/history", response_model=List[PortfolioHistorySnapshotResponse])
-def get_portfolio_history():
+def get_portfolio_history(range: Optional[str] = None):
     """
-    Get chronological net worth snapshots for performance charts.
+    Get chronological net worth snapshots for performance charts with optional range filter (1W, 1M, 3M, ALL).
     """
     try:
         repo = get_history_repo()
-        snapshots = repo.get_history()
+        snapshots = repo.get_history(range_str=range)
         return [
             PortfolioHistorySnapshotResponse(
                 id=s.id,

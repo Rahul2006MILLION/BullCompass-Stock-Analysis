@@ -32,6 +32,18 @@ def test_portfolio_history_endpoint():
     assert isinstance(data, list)
 
 
+def test_portfolio_history_ranges():
+    for r in ["1W", "1M", "3M", "ALL"]:
+        response = client.get(f"/api/portfolio/history?range={r}")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        if len(data) > 0:
+            assert "net_worth" in data[0]
+            assert "timestamp" in data[0]
+
+
+
 def test_transactions_endpoint():
     response = client.get("/api/portfolio/transactions")
     assert response.status_code == 200

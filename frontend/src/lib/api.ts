@@ -94,8 +94,9 @@ export const api = {
   },
 
   // History & Transactions
-  getPortfolioHistory: (): Promise<PortfolioHistorySnapshot[]> => {
-    return fetchJson<PortfolioHistorySnapshot[]>("/api/portfolio/history");
+  getPortfolioHistory: (range?: "1W" | "1M" | "3M" | "ALL" | string): Promise<PortfolioHistorySnapshot[]> => {
+    const query = range && range !== "ALL" ? `?range=${encodeURIComponent(range)}` : "";
+    return fetchJson<PortfolioHistorySnapshot[]>(`/api/portfolio/history${query}`);
   },
 
   getTransactions: (ticker?: string): Promise<Transaction[]> => {

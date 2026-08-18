@@ -14,19 +14,19 @@ export function Header({ onOpenAddModal, onOpenQuickTrade }: HeaderProps) {
     <header className="h-16 apple-liquid-header px-6 flex items-center justify-between sticky top-3 z-30 select-none shadow-xl mb-4">
       {/* Market Indices Ticker Bar */}
       <div className="flex items-center gap-3.5 overflow-x-auto py-1 text-xs relative z-10">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#111622]/90 border border-white/10 shadow-sm backdrop-blur-sm">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#111622]/90 border border-white/[0.05] shadow-sm backdrop-blur-sm">
           <span className="font-semibold text-gray-300">NIFTY 50</span>
           <span className="font-mono text-gray-100">24,850.30</span>
           <span className="text-emerald-400 font-mono font-medium">+0.68%</span>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622]/90 border border-white/10 shadow-sm backdrop-blur-sm hidden sm:flex">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622]/90 border border-white/[0.05] shadow-sm backdrop-blur-sm hidden sm:flex">
           <span className="font-semibold text-gray-300">SENSEX</span>
           <span className="font-mono text-gray-100">81,340.15</span>
           <span className="text-emerald-400 font-mono font-medium">+0.54%</span>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622]/90 border border-white/10 shadow-sm backdrop-blur-sm hidden md:flex">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622]/90 border border-white/[0.05] shadow-sm backdrop-blur-sm hidden md:flex">
           <span className="font-semibold text-gray-300">INDIA VIX</span>
           <span className="font-mono text-gray-100">13.20</span>
           <span className="text-rose-400 font-mono font-medium">-2.15%</span>

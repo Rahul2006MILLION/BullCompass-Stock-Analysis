@@ -56,17 +56,14 @@ export function StockCard({
       : 0;
 
   return (
-    <Card
-      className={`group transition-all duration-300 bg-[#0d121a]/95 hover:bg-[#111724] border-white/8 hover:border-white/20 relative overflow-hidden ${
-        isPositive ? "hover:border-emerald-500/30" : "hover:border-rose-500/30"
-      }`}
-    >
-      {/* Subtle top indicator bar */}
-      <div
-        className={`absolute top-0 left-0 right-0 h-[2px] opacity-75 group-hover:opacity-100 transition-opacity ${
-          isPositive ? "bg-emerald-500" : "bg-rose-500"
-        }`}
-      />
+    <div className="liquid-card-shell group">
+      <div className="liquid-card-inner">
+        {/* Subtle top indicator bar */}
+        <div
+          className={`absolute top-0 left-0 right-0 h-[2px] opacity-75 group-hover:opacity-100 transition-opacity ${
+            isPositive ? "bg-emerald-500" : "bg-rose-500"
+          }`}
+        />
 
       {/* Header */}
       <div className="flex items-start justify-between mb-3.5 pt-1">

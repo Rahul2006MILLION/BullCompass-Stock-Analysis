@@ -16,6 +16,7 @@ import {
   NewsFilterParams,
 } from "@/types/news";
 import { ComprehensiveResearchReport } from "@/types/research";
+import { WatchlistItem, WatchlistResponse } from "@/types/watchlist";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -160,5 +161,23 @@ export const api = {
 
   getNewsArticle: (newsId: string): Promise<NewsItem> => {
     return fetchJson<NewsItem>(`/api/news/${encodeURIComponent(newsId)}`);
+  },
+
+  // Watchlist
+  getWatchlist: (): Promise<WatchlistResponse> => {
+    return fetchJson<WatchlistResponse>("/api/watchlist");
+  },
+
+  addToWatchlist: (ticker: string): Promise<WatchlistItem> => {
+    return fetchJson<WatchlistItem>("/api/watchlist", {
+      method: "POST",
+      body: JSON.stringify({ ticker }),
+    });
+  },
+
+  removeFromWatchlist: (ticker: string): Promise<{ status: string; message: string }> => {
+    return fetchJson<{ status: string; message: string }>(`/api/watchlist/${encodeURIComponent(ticker)}`, {
+      method: "DELETE",
+    });
   },
 };

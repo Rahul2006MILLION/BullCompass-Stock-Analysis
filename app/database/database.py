@@ -134,4 +134,14 @@ class Database:
             )
         """)
 
+        # Watchlist table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS watchlist (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticker TEXT NOT NULL UNIQUE,
+                company_name TEXT NOT NULL,
+                added_at TEXT NOT NULL
+            )
+        """)
+
         self.connection.commit()

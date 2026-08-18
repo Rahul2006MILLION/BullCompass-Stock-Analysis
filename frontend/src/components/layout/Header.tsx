@@ -11,22 +11,22 @@ interface HeaderProps {
 
 export function Header({ onOpenAddModal, onOpenQuickTrade }: HeaderProps) {
   return (
-    <header className="h-16 border-b border-white/8 bg-[#090c12]/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-30 select-none">
+    <header className="h-16 apple-glass-header px-8 flex items-center justify-between sticky top-0 z-30 select-none">
       {/* Market Indices Ticker Bar */}
-      <div className="flex items-center gap-6 overflow-x-auto py-1 text-xs">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622] border border-white/6">
+      <div className="flex items-center gap-4 overflow-x-auto py-1 text-xs">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622]/90 border border-white/8 shadow-sm">
           <span className="font-semibold text-gray-300">NIFTY 50</span>
           <span className="font-mono text-gray-100">24,850.30</span>
           <span className="text-emerald-400 font-mono font-medium">+0.68%</span>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622] border border-white/6 hidden sm:flex">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622]/90 border border-white/8 shadow-sm hidden sm:flex">
           <span className="font-semibold text-gray-300">SENSEX</span>
           <span className="font-mono text-gray-100">81,340.15</span>
           <span className="text-emerald-400 font-mono font-medium">+0.54%</span>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622] border border-white/6 hidden md:flex">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111622]/90 border border-white/8 shadow-sm hidden md:flex">
           <span className="font-semibold text-gray-300">INDIA VIX</span>
           <span className="font-mono text-gray-100">13.20</span>
           <span className="text-rose-400 font-mono font-medium">-2.15%</span>

@@ -11,11 +11,13 @@ from app.services.stock_service import StockService
 from app.services.ollama_service import OllamaService
 from app.services.news_service import NewsService
 from app.services.research_coordinator import ResearchCoordinatorService
+from app.services.watchlist_service import WatchlistService
 from app.api.schemas import (
     BuyStockRequest,
     SellStockRequest,
     AddHoldingRequest,
     UpdateHoldingRequest,
+    AddWatchlistRequest,
     AIAnalyzeRequest,
     PortfolioSummaryResponse,
     HoldingItemResponse,
@@ -23,6 +25,8 @@ from app.api.schemas import (
     TransactionResponse,
     CompanyQuoteResponse,
     AIAnalysisResponse,
+    WatchlistItemResponse,
+    WatchlistResponse,
     NewsItemResponse,
     NewsListResponse,
     NewsMetadataResponse,
@@ -73,6 +77,10 @@ def get_news_service() -> NewsService:
 
 def get_research_coordinator() -> ResearchCoordinatorService:
     return ResearchCoordinatorService()
+
+
+def get_watchlist_service() -> WatchlistService:
+    return WatchlistService()
 
 
 # -------------------------------------------------------------------------
@@ -749,4 +757,139 @@ def analyze_stock(payload: AIAnalyzeRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"AI analysis failed: {str(e)}",
+        )
+
+
+# -------------------------------------------------------------------------
+# Watchlist Endpoints (Phase 1)
+# -------------------------------------------------------------------------
+
+@router.get("/watchlist", response_model=WatchlistResponse)
+def get_watchlist():
+    """
+    Get all watchlist items with live market valuations and portfolio ownership flags.
+    """
+    try:
+        service = get_watchlist_service()
+        items_data = service.get_watchlist()
+        items = [
+            WatchlistItemResponse(
+                id=item["id"],
+                ticker=item["ticker"],
+                resolved_ticker=item["resolved_ticker"],
+                company_name=item["company_name"],
+                current_price=item.get("current_price"),
+                change=item.get("change"),
+                change_percent=item.get("change_percent"),
+                is_owned=item.get("is_owned", False),
+                added_at=item["added_at"],
+            )
+            for item in items_data
+        ]
+        return WatchlistResponse(total=len(items), items=items)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch watchlist: {str(e)}",
+        )
+
+
+@router.post("/watchlist", response_model=WatchlistItemResponse)
+def add_to_watchlist(payload: AddWatchlistRequest):
+    """
+    Add a new stock symbol to the user's watchlist after verifying ticker authenticity.
+    """
+    clean_ticker = payload.ticker.strip().upper()
+    try:
+        service = get_watchlist_service()
+        item = service.add_to_watchlist(clean_ticker)
+        return WatchlistItemResponse(
+            id=item["id"],
+            ticker=item["ticker"],
+            resolved_ticker=item["resolved_ticker"],
+            company_name=item["company_name"],
+            current_price=item.get("current_price"),
+            change=item.get("change"),
+            change_percent=item.get("change_percent"),
+            is_owned=item.get("is_owned", False),
+            added_at=item["added_at"],
+        )
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        err_msg = str(ve)
+        if "already in your watchlist" in err_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=err_msg,
+            )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=err_msg,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"We couldn't find a listed stock matching '{clean_ticker}'.",
+        )
+
+
+@router.get("/watchlist/{ticker}", response_model=WatchlistItemResponse)
+def get_watchlist_item(ticker: str):
+    """
+    Get a single watchlist item by symbol.
+    """
+    clean_ticker = ticker.strip().upper()
+    try:
+        service = get_watchlist_service()
+        item = service.get_watchlist_item(clean_ticker)
+        return WatchlistItemResponse(
+            id=item["id"],
+            ticker=item["ticker"],
+            resolved_ticker=item["resolved_ticker"],
+            company_name=item["company_name"],
+            current_price=item.get("current_price"),
+            change=item.get("change"),
+            change_percent=item.get("change_percent"),
+            is_owned=item.get("is_owned", False),
+            added_at=item["added_at"],
+        )
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(ve),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch watchlist item '{clean_ticker}': {str(e)}",
+        )
+
+
+@router.delete("/watchlist/{ticker}", response_model=MessageResponse)
+def delete_from_watchlist(ticker: str):
+    """
+    Remove a stock symbol from the user's watchlist without affecting portfolio holdings.
+    """
+    clean_ticker = ticker.strip().upper()
+    try:
+        service = get_watchlist_service()
+        service.delete_from_watchlist(clean_ticker)
+        return MessageResponse(
+            status="success",
+            message=f"Stock '{clean_ticker}' was removed from your watchlist.",
+        )
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(ve),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to remove '{clean_ticker}' from watchlist: {str(e)}",
         )

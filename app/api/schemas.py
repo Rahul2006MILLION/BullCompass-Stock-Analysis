@@ -244,6 +244,27 @@ class AIAnalysisResponse(BaseModel):
     analysis: str
 
 
+class AddWatchlistRequest(BaseModel):
+    ticker: str = Field(..., description="Stock symbol to add to watchlist", example="INFY")
+
+
+class WatchlistItemResponse(BaseModel):
+    id: Optional[int] = None
+    ticker: str
+    resolved_ticker: str
+    company_name: str
+    current_price: Optional[float] = None
+    change: Optional[float] = None
+    change_percent: Optional[float] = None
+    is_owned: bool = False
+    added_at: str
+
+
+class WatchlistResponse(BaseModel):
+    total: int
+    items: List[WatchlistItemResponse]
+
+
 class MessageResponse(BaseModel):
     status: str
     message: str

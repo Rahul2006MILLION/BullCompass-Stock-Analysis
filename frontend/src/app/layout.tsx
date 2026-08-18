@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { CursorGlow } from "@/components/layout/CursorGlow";
 import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata: Metadata = {
@@ -16,7 +17,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-[#080a0f] text-gray-100 min-h-screen flex antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
+      <body className="bg-[#080a0f] text-gray-100 min-h-screen flex antialiased selection:bg-emerald-500/30 selection:text-emerald-300 relative overflow-x-hidden">
+        <CursorGlow />
         <ToastProvider>
           {/* Main App Layout */}
           <div className="flex w-full min-h-screen relative z-10 p-3 gap-4">
@@ -35,3 +37,4 @@ export default function RootLayout({
     </html>
   );
 }
+

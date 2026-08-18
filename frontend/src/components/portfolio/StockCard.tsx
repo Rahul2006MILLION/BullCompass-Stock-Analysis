@@ -33,6 +33,19 @@ export function StockCard({
   onEdit,
   onDelete,
 }: StockCardProps) {
+  const unrealizedProfit =
+    holding.profit ??
+    (holding.current_price != null
+      ? (holding.current_price - holding.average_buy_price) * holding.quantity
+      : 0);
+
+  const stockNameColor =
+    unrealizedProfit > 0
+      ? "text-emerald-400 group-hover:text-emerald-300"
+      : unrealizedProfit < 0
+      ? "text-rose-400 group-hover:text-rose-300"
+      : "text-white group-hover:text-gray-200";
+
   const isPositive = (holding.profit || 0) >= 0;
   const currentVal = holding.current_value ?? holding.quantity * (holding.current_price || holding.average_buy_price);
   const investedVal = holding.invested ?? holding.quantity * holding.average_buy_price;
@@ -59,7 +72,7 @@ export function StockCard({
       <div className="flex items-start justify-between mb-3.5 pt-1">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-lg text-white font-mono tracking-tight group-hover:text-emerald-400 transition-colors">
+            <span className={`font-bold text-lg font-mono tracking-tight transition-colors ${stockNameColor}`}>
               {holding.ticker}
             </span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-gray-400 border border-white/8">

@@ -42,10 +42,11 @@ class MarketSessionManager:
     POST_MARKET_END_TIME = time(16, 0)
 
     _instance: Optional["MarketSessionManager"] = None
-    _frozen_sessions: Dict[str, Dict[str, Any]] = {}
 
     def __init__(self, storage_dir: Optional[str] = None):
-        self.storage_dir = storage_dir or os.path.join(
+        self._frozen_sessions: Dict[str, Dict[str, Any]] = {}
+        env_storage = os.environ.get("BULLCOMPASS_SESSION_STORAGE_DIR")
+        self.storage_dir = storage_dir or env_storage or os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
             "data",
             "sessions"
@@ -60,6 +61,11 @@ class MarketSessionManager:
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
+
+    @classmethod
+    def reset_instance(cls) -> None:
+        """Reset the singleton instance (used for test isolation)."""
+        cls._instance = None
 
     def get_current_time_ist(self, dt: Optional[datetime] = None) -> datetime:
         if dt is None:

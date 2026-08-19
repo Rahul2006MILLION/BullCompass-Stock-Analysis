@@ -47,3 +47,10 @@ def get_market_data_provider() -> MarketDataProvider:
 
     return _active_provider
 
+
+def reset_market_data_provider() -> None:
+    """Reset the cached active market data provider instance."""
+    global _active_provider
+    _active_provider = None
+
+

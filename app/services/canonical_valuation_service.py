@@ -84,6 +84,11 @@ class CanonicalValuationService:
             cls._instance = cls()
         return cls._instance
 
+    @classmethod
+    def reset_instance(cls) -> None:
+        """Reset the singleton instance (used for test isolation)."""
+        cls._instance = None
+
     def get_canonical_quotes(
         self,
         symbols: List[str],

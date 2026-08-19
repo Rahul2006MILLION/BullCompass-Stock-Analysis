@@ -1,3 +1,6 @@
+import os
+import tempfile
+import shutil
 import unittest
 from unittest.mock import patch, MagicMock
 from app.models.intelligence import (
@@ -14,18 +17,39 @@ from app.services.intelligence.impact_analyzer import NewsImpactAnalyzer
 from app.services.intelligence.universe import StockUniverseRegistry
 from app.database.database import Database
 from app.database.intelligence_repository import IntelligenceRepository
+from app.services.market_session import MarketSessionManager
+from app.services.canonical_valuation_service import CanonicalValuationService
 from fastapi.testclient import TestClient
 from app.api.main import app
 
-client = TestClient(app)
-
 
 class TestInvestmentIntelligence(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp_dir = tempfile.mkdtemp()
+        os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"] = cls.temp_dir
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
+        cls.client = TestClient(app)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.temp_dir, ignore_errors=True)
+        if "BULLCOMPASS_SESSION_STORAGE_DIR" in os.environ:
+            del os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"]
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
 
     def setUp(self):
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
         self.evaluator = OpportunityEvaluator()
         self.analyzer = NewsImpactAnalyzer()
         self.repo = IntelligenceRepository()
+
+    def tearDown(self):
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
 
     def test_stock_universe_registry(self):
         """Test universe mappings and keyword discovery."""
@@ -250,7 +274,7 @@ class TestInvestmentIntelligence(unittest.TestCase):
     def test_api_intelligence_endpoints(self):
         """Test API endpoints for investment intelligence."""
         # 1. Opportunities endpoint
-        resp = client.get("/api/intelligence/opportunities")
+        resp = self.client.get("/api/intelligence/opportunities")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn("total", data)

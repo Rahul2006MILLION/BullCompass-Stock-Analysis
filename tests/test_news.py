@@ -1,3 +1,6 @@
+import os
+import tempfile
+import shutil
 import unittest
 from fastapi.testclient import TestClient
 
@@ -6,13 +9,36 @@ from app.models.news import NewsItem, NewsCategory, EntityExposure, ExposureType
 from app.database.news_repository import NewsRepository
 from app.services.news.aggregator import NewsAggregator, classify_category, determine_importance
 from app.services.news_service import NewsService
+from app.services.market_session import MarketSessionManager
+from app.services.canonical_valuation_service import CanonicalValuationService
 
 
 class TestNewsPipeline(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp_dir = tempfile.mkdtemp()
+        os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"] = cls.temp_dir
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.temp_dir, ignore_errors=True)
+        if "BULLCOMPASS_SESSION_STORAGE_DIR" in os.environ:
+            del os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"]
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
+
     def setUp(self):
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
         self.client = TestClient(app)
         self.repo = NewsRepository()
         self.service = NewsService()
+
+    def tearDown(self):
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
 
     def test_category_classifier(self):
         # Macro & Economy

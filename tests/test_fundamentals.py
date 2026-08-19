@@ -1,3 +1,6 @@
+import os
+import tempfile
+import shutil
 import unittest
 from fastapi.testclient import TestClient
 from app.api.main import app
@@ -5,16 +8,30 @@ from app.services.fundamental_service import FundamentalDataService
 from app.services.historical_analyzer import HistoricalFundamentalAnalyzer
 from app.services.valuation_analyzer import ValuationAnalyzer
 from app.services.decision_engine import InvestmentDecisionEngine
+from app.services.market_session import MarketSessionManager
+from app.services.canonical_valuation_service import CanonicalValuationService
 
 
 class TestFundamentalsEngine(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.temp_dir = tempfile.mkdtemp()
+        os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"] = cls.temp_dir
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
         cls.client = TestClient(app)
         cls.fund_service = FundamentalDataService()
         cls.hist_analyzer = HistoricalFundamentalAnalyzer()
         cls.val_analyzer = ValuationAnalyzer()
         cls.decision_engine = InvestmentDecisionEngine()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.temp_dir, ignore_errors=True)
+        if "BULLCOMPASS_SESSION_STORAGE_DIR" in os.environ:
+            del os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"]
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
 
     def test_hdfc_bank_fundamentals(self):
         meta, inc, bs, cf, ratios = self.fund_service.fetch_fundamentals("HDFCBANK")

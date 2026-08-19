@@ -1,3 +1,6 @@
+import os
+import tempfile
+import shutil
 import unittest
 import sqlite3
 from fastapi.testclient import TestClient
@@ -8,10 +11,29 @@ from app.database.watchlist_repository import WatchlistRepository
 from app.database.portfolio_repository import PortfolioRepository
 from app.models.portfolio import PortfolioHolding
 from app.services.watchlist_service import WatchlistService
+from app.services.market_session import MarketSessionManager
+from app.services.canonical_valuation_service import CanonicalValuationService
 
 
 class TestWatchlistFeature(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp_dir = tempfile.mkdtemp()
+        os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"] = cls.temp_dir
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.temp_dir, ignore_errors=True)
+        if "BULLCOMPASS_SESSION_STORAGE_DIR" in os.environ:
+            del os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"]
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
+
     def setUp(self):
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
         # Create an in-memory SQLite database for isolated unit testing
         self.db = Database(":memory:")
         self.repo = WatchlistRepository(self.db)
@@ -22,6 +44,10 @@ class TestWatchlistFeature(unittest.TestCase):
             portfolio_repo=self.portfolio_repo,
         )
         self.client = TestClient(app)
+
+    def tearDown(self):
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
 
     def test_normalize_ticker(self):
         self.assertEqual(WatchlistService.normalize_ticker("hdfcbank"), "HDFCBANK")

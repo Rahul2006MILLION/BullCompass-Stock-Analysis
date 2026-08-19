@@ -1,128 +1,137 @@
+import os
+import tempfile
+import shutil
+import unittest
 from fastapi.testclient import TestClient
 from app.api.main import app
-
-client = TestClient(app)
-
-
-def test_root_endpoint():
-    response = client.get("/")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "online"
-    assert data["app"] == "BullCompass"
+from app.services.market_session import MarketSessionManager
+from app.services.canonical_valuation_service import CanonicalValuationService
 
 
-def test_portfolio_summary_endpoint():
-    response = client.get("/api/portfolio")
-    assert response.status_code == 200
-    data = response.json()
-    assert "total_holdings" in data
-    assert "total_invested" in data
-    assert "total_current_value" in data
-    assert "total_unrealized_profit" in data
-    assert "total_return_percentage" in data
-    assert "total_realized_profit" in data
-    assert isinstance(data["holdings"], list)
+class TestApiEndpoints(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp_dir = tempfile.mkdtemp()
+        os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"] = cls.temp_dir
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
+        cls.client = TestClient(app)
 
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.temp_dir, ignore_errors=True)
+        if "BULLCOMPASS_SESSION_STORAGE_DIR" in os.environ:
+            del os.environ["BULLCOMPASS_SESSION_STORAGE_DIR"]
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
 
-def test_portfolio_history_endpoint():
-    response = client.get("/api/portfolio/history")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
+    def setUp(self):
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
 
+    def tearDown(self):
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
 
-def test_portfolio_history_ranges():
-    for r in ["1W", "1M", "3M", "ALL"]:
-        response = client.get(f"/api/portfolio/history?range={r}")
-        assert response.status_code == 200
+    def test_root_endpoint(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
         data = response.json()
-        assert isinstance(data, list)
-        if len(data) > 0:
-            assert "net_worth" in data[0]
-            assert "timestamp" in data[0]
+        self.assertEqual(data["status"], "online")
+        self.assertEqual(data["app"], "BullCompass")
 
+    def test_portfolio_summary_endpoint(self):
+        response = self.client.get("/api/portfolio")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("total_holdings", data)
+        self.assertIn("total_invested", data)
+        self.assertIn("total_current_value", data)
+        self.assertIn("total_unrealized_profit", data)
+        self.assertIn("total_return_percentage", data)
+        self.assertIn("total_realized_profit", data)
+        self.assertIsInstance(data["holdings"], list)
 
+    def test_portfolio_history_endpoint(self):
+        response = self.client.get("/api/portfolio/history")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIsInstance(data, list)
 
-def test_transactions_endpoint():
-    response = client.get("/api/portfolio/transactions")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
+    def test_portfolio_history_ranges(self):
+        for r in ["1W", "1M", "3M", "ALL"]:
+            response = self.client.get(f"/api/portfolio/history?range={r}")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertIsInstance(data, list)
+            if len(data) > 0:
+                self.assertIn("net_worth", data[0])
+                self.assertIn("timestamp", data[0])
 
+    def test_transactions_endpoint(self):
+        response = self.client.get("/api/portfolio/transactions")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIsInstance(data, list)
 
-def test_realized_profit_endpoint():
-    response = client.get("/api/portfolio/realized-profit")
-    assert response.status_code == 200
-    data = response.json()
-    assert "realized_profit" in data
+    def test_realized_profit_endpoint(self):
+        response = self.client.get("/api/portfolio/realized-profit")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("realized_profit", data)
 
+    def test_market_quote_valid(self):
+        response = self.client.get("/api/market/quote/HDFCBANK")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertNotEqual(data["name"], "")
+        self.assertGreater(data["current_price"], 0)
+        self.assertGreater(data["market_cap"], 0)
 
-def test_market_quote_valid():
-    response = client.get("/api/market/quote/HDFCBANK")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["name"] != ""
-    assert data["current_price"] > 0
-    assert data["market_cap"] > 0
+    def test_market_quote_invalid(self):
+        # Invalid ticker PCJEWELLERS must return 404 and never return 0 values
+        response = self.client.get("/api/market/quote/PCJEWELLERS")
+        self.assertEqual(response.status_code, 404)
+        data = response.json()
+        self.assertIn("detail", data)
+        self.assertIn("We couldn't find a listed stock matching 'PCJEWELLERS'.", data["detail"])
 
+        # Random invalid ticker XYZABC123 must also return 404
+        response = self.client.get("/api/market/quote/XYZABC123")
+        self.assertEqual(response.status_code, 404)
 
-def test_market_quote_invalid():
-    # Invalid ticker PCJEWELLERS must return 404 and never return 0 values
-    response = client.get("/api/market/quote/PCJEWELLERS")
-    assert response.status_code == 404
-    data = response.json()
-    assert "detail" in data
-    assert "We couldn't find a listed stock matching 'PCJEWELLERS'." in data["detail"]
+    def test_market_status_endpoint(self):
+        response = self.client.get("/api/market/status")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("is_open", data)
+        self.assertIn("status", data)
+        self.assertIn("current_time_ist", data)
+        self.assertIn("timezone", data)
 
-    # Random invalid ticker XYZABC123 must also return 404
-    response = client.get("/api/market/quote/XYZABC123")
-    assert response.status_code == 404
+    def test_batch_quotes_post_endpoint(self):
+        response = self.client.post("/api/quotes/batch", json={"tickers": ["TCS", "INFY", "^NSEI"]})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("quotes", data)
+        self.assertIn("market_status", data)
+        quotes = data["quotes"]
+        self.assertIn("TCS", quotes)
+        self.assertIn("INFY", quotes)
+        self.assertIsNotNone(quotes["TCS"]["current_price"])
+        self.assertGreater(quotes["TCS"]["current_price"], 0)
 
-
-def test_market_status_endpoint():
-    response = client.get("/api/market/status")
-    assert response.status_code == 200
-    data = response.json()
-    assert "is_open" in data
-    assert "status" in data
-    assert "current_time_ist" in data
-    assert "timezone" in data
-
-
-def test_batch_quotes_post_endpoint():
-    response = client.post("/api/quotes/batch", json={"tickers": ["TCS", "INFY", "^NSEI"]})
-    assert response.status_code == 200
-    data = response.json()
-    assert "quotes" in data
-    assert "market_status" in data
-    quotes = data["quotes"]
-    assert "TCS" in quotes
-    assert "INFY" in quotes
-    assert quotes["TCS"]["current_price"] is not None
-    assert quotes["TCS"]["current_price"] > 0
-
-
-def test_batch_quotes_get_endpoint():
-    response = client.get("/api/quotes/batch?symbols=TCS,INFY")
-    assert response.status_code == 200
-    data = response.json()
-    assert "quotes" in data
-    quotes = data["quotes"]
-    assert "TCS" in quotes
-    assert "INFY" in quotes
+    def test_batch_quotes_get_endpoint(self):
+        response = self.client.get("/api/quotes/batch?symbols=TCS,INFY")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("quotes", data)
+        quotes = data["quotes"]
+        self.assertIn("TCS", quotes)
+        self.assertIn("INFY", quotes)
 
 
 if __name__ == "__main__":
-    test_root_endpoint()
-    test_portfolio_summary_endpoint()
-    test_portfolio_history_endpoint()
-    test_transactions_endpoint()
-    test_realized_profit_endpoint()
-    test_market_quote_valid()
-    test_market_quote_invalid()
-    test_market_status_endpoint()
-    test_batch_quotes_post_endpoint()
-    test_batch_quotes_get_endpoint()
-    print("All backend API tests passed successfully!")
+    unittest.main()
+
 

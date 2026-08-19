@@ -14,6 +14,18 @@ class TestAngelOneProvider(unittest.TestCase):
     def setUpClass(cls):
         cls.resolver = AngelOneSymbolResolver()
 
+    def setUp(self):
+        from app.services.market_session import MarketSessionManager
+        from app.services.canonical_valuation_service import CanonicalValuationService
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
+
+    def tearDown(self):
+        from app.services.market_session import MarketSessionManager
+        from app.services.canonical_valuation_service import CanonicalValuationService
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
+
     def test_totp_generator(self):
         # Base32 secret test
         secret = "JBSWY3DPEHPK3PXP"

@@ -65,9 +65,10 @@ class MockMarketDataProvider(MarketDataProvider):
 class TestCanonicalSessionValuation(unittest.TestCase):
 
     def setUp(self):
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
         self.temp_dir = tempfile.mkdtemp()
         self.session_manager = MarketSessionManager(storage_dir=self.temp_dir)
-        self.session_manager._frozen_sessions.clear()
         self.mock_provider = MockMarketDataProvider()
         self.canonical_service = CanonicalValuationService(
             provider=self.mock_provider,
@@ -82,6 +83,8 @@ class TestCanonicalSessionValuation(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
+        MarketSessionManager.reset_instance()
+        CanonicalValuationService.reset_instance()
 
     def test_market_open_ltp_updates(self):
         """
@@ -369,6 +372,43 @@ class TestCanonicalSessionValuation(unittest.TestCase):
             self.assertEqual(val2.total_current_value, val3.total_current_value)
             self.assertEqual(val1.total_unrealized_profit, val3.total_unrealized_profit)
 
+    def test_mock_quotes_cannot_pollute_production_session_storage(self):
+        """
+        Requirement: Verify that mock test quotes (e.g. NITCO=89.80, MRF=133500)
+        are written ONLY to the isolated temporary test directory and NEVER to production
+        data/sessions/.
+        """
+        import json
+        import os
+
+        closed_time = datetime(2026, 8, 19, 18, 0, 0, tzinfo=IST)
+        with patch.object(self.session_manager, "get_current_time_ist", return_value=closed_time):
+            val = self.canonical_service.evaluate_portfolio(self.sample_holdings)
+
+            # Assert that the session file was created in isolated test temp_dir
+            session_id = val.session_info.session_id
+            test_file = os.path.join(self.temp_dir, f"{session_id}.json")
+            self.assertTrue(os.path.exists(test_file))
+
+            with open(test_file, "r") as f:
+                test_data = json.load(f)
+                self.assertIn("NITCO", test_data)
+                self.assertEqual(test_data["NITCO"]["ltp"], 89.80)
+                self.assertIn("MRF", test_data)
+
+            # Assert that production data/sessions/ directory does NOT contain MRF from this test
+            prod_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "data",
+                "sessions",
+            )
+            prod_file = os.path.join(prod_dir, f"{session_id}.json")
+            if os.path.exists(prod_file):
+                with open(prod_file, "r") as pf:
+                    prod_data = json.load(pf)
+                    self.assertNotIn("MRF", prod_data, "MRF test quote leaked into production session storage!")
+
 
 if __name__ == "__main__":
     unittest.main()
+

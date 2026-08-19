@@ -49,9 +49,19 @@ from app.api.schemas import (
     BatchQuotesResponse,
     ReconciliationItemResponse,
     PortfolioReconciliationResponse,
+    IntelligenceScoreBreakdownResponse,
+    IntelligenceMetricsResponse,
+    HardGateTriggerResponse,
+    InvestmentOpportunityResponse,
+    OpportunitiesListResponse,
 )
+from app.services.intelligence.engine import InvestmentIntelligenceEngine
 
 router = APIRouter(prefix="/api", tags=["portfolio"])
+
+
+def get_intelligence_engine() -> InvestmentIntelligenceEngine:
+    return InvestmentIntelligenceEngine()
 
 
 def get_portfolio_agent() -> PortfolioAgent:
@@ -1035,3 +1045,185 @@ def delete_from_watchlist(ticker: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to remove '{clean_ticker}' from watchlist: {str(e)}",
         )
+
+
+# -------------------------------------------------------------------------
+# AI Investment Intelligence Endpoints
+# -------------------------------------------------------------------------
+
+@router.get("/intelligence/opportunities", response_model=OpportunitiesListResponse)
+def get_investment_opportunities(
+    limit: int = 30,
+    offset: int = 0,
+    recommendation: Optional[str] = None,
+    sector: Optional[str] = None,
+    search: Optional[str] = None,
+):
+    """
+    Retrieve structured multi-factor AI investment opportunities discovered across the NSE universe.
+    """
+    try:
+        engine = get_intelligence_engine()
+        items = engine.get_opportunities(
+            limit=limit,
+            offset=offset,
+            recommendation=recommendation,
+            sector=sector,
+            search=search,
+            auto_scan_if_empty=True,
+        )
+        return OpportunitiesListResponse(
+            total=len(items),
+            opportunities=[
+                InvestmentOpportunityResponse(
+                    id=opp.id,
+                    ticker=opp.ticker,
+                    company_name=opp.company_name,
+                    sector=opp.sector,
+                    industry=opp.industry,
+                    recommendation=opp.recommendation.value,
+                    conviction_score=opp.conviction_score,
+                    time_horizon=opp.time_horizon,
+                    current_price=opp.current_price,
+                    news_id=opp.news_id,
+                    news_title=opp.news_title,
+                    news_source=opp.news_source,
+                    news_published_at=opp.news_published_at,
+                    event_summary=opp.event_summary,
+                    impact_direction=opp.impact_direction,
+                    impact_strength=opp.impact_strength,
+                    transmission_mechanism=opp.transmission_mechanism,
+                    scores=IntelligenceScoreBreakdownResponse(**opp.to_dict()["scores"]),
+                    metrics=IntelligenceMetricsResponse(**opp.to_dict()["metrics"]),
+                    hard_gates_triggered=[
+                        HardGateTriggerResponse(**g) for g in opp.to_dict()["hard_gates_triggered"]
+                    ],
+                    is_owned=opp.is_owned,
+                    portfolio_quantity=opp.portfolio_quantity,
+                    portfolio_avg_buy_price=opp.portfolio_avg_buy_price,
+                    portfolio_allocation_pct=opp.portfolio_allocation_pct,
+                    investment_thesis=opp.investment_thesis,
+                    key_catalysts=opp.key_catalysts,
+                    key_risks=opp.key_risks,
+                    thesis_invalidation_triggers=opp.thesis_invalidation_triggers,
+                    created_at=opp.created_at,
+                )
+                for opp in items
+            ],
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch investment opportunities: {str(e)}",
+        )
+
+
+@router.get("/intelligence/opportunity/{opp_id}", response_model=InvestmentOpportunityResponse)
+def get_opportunity_detail(opp_id: int):
+    """
+    Retrieve single comprehensive investment opportunity by ID with full chain of evidence.
+    """
+    try:
+        engine = get_intelligence_engine()
+        opp = engine.get_opportunity_by_id(opp_id)
+        if not opp:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Investment opportunity with ID {opp_id} not found.",
+            )
+        return InvestmentOpportunityResponse(
+            id=opp.id,
+            ticker=opp.ticker,
+            company_name=opp.company_name,
+            sector=opp.sector,
+            industry=opp.industry,
+            recommendation=opp.recommendation.value,
+            conviction_score=opp.conviction_score,
+            time_horizon=opp.time_horizon,
+            current_price=opp.current_price,
+            news_id=opp.news_id,
+            news_title=opp.news_title,
+            news_source=opp.news_source,
+            news_published_at=opp.news_published_at,
+            event_summary=opp.event_summary,
+            impact_direction=opp.impact_direction,
+            impact_strength=opp.impact_strength,
+            transmission_mechanism=opp.transmission_mechanism,
+            scores=IntelligenceScoreBreakdownResponse(**opp.to_dict()["scores"]),
+            metrics=IntelligenceMetricsResponse(**opp.to_dict()["metrics"]),
+            hard_gates_triggered=[
+                HardGateTriggerResponse(**g) for g in opp.to_dict()["hard_gates_triggered"]
+            ],
+            is_owned=opp.is_owned,
+            portfolio_quantity=opp.portfolio_quantity,
+            portfolio_avg_buy_price=opp.portfolio_avg_buy_price,
+            portfolio_allocation_pct=opp.portfolio_allocation_pct,
+            investment_thesis=opp.investment_thesis,
+            key_catalysts=opp.key_catalysts,
+            key_risks=opp.key_risks,
+            thesis_invalidation_triggers=opp.thesis_invalidation_triggers,
+            created_at=opp.created_at,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch opportunity details: {str(e)}",
+        )
+
+
+@router.post("/intelligence/scan", response_model=OpportunitiesListResponse)
+def trigger_intelligence_scan(max_articles: int = 4):
+    """
+    Trigger real-time scanning of latest financial news across the NSE universe.
+    """
+    try:
+        engine = get_intelligence_engine()
+        engine.scan_and_generate_opportunities(max_articles=max_articles)
+        items = engine.get_opportunities(limit=50, auto_scan_if_empty=False)
+        return OpportunitiesListResponse(
+            total=len(items),
+            opportunities=[
+                InvestmentOpportunityResponse(
+                    id=opp.id,
+                    ticker=opp.ticker,
+                    company_name=opp.company_name,
+                    sector=opp.sector,
+                    industry=opp.industry,
+                    recommendation=opp.recommendation.value,
+                    conviction_score=opp.conviction_score,
+                    time_horizon=opp.time_horizon,
+                    current_price=opp.current_price,
+                    news_id=opp.news_id,
+                    news_title=opp.news_title,
+                    news_source=opp.news_source,
+                    news_published_at=opp.news_published_at,
+                    event_summary=opp.event_summary,
+                    impact_direction=opp.impact_direction,
+                    impact_strength=opp.impact_strength,
+                    transmission_mechanism=opp.transmission_mechanism,
+                    scores=IntelligenceScoreBreakdownResponse(**opp.to_dict()["scores"]),
+                    metrics=IntelligenceMetricsResponse(**opp.to_dict()["metrics"]),
+                    hard_gates_triggered=[
+                        HardGateTriggerResponse(**g) for g in opp.to_dict()["hard_gates_triggered"]
+                    ],
+                    is_owned=opp.is_owned,
+                    portfolio_quantity=opp.portfolio_quantity,
+                    portfolio_avg_buy_price=opp.portfolio_avg_buy_price,
+                    portfolio_allocation_pct=opp.portfolio_allocation_pct,
+                    investment_thesis=opp.investment_thesis,
+                    key_catalysts=opp.key_catalysts,
+                    key_risks=opp.key_risks,
+                    thesis_invalidation_triggers=opp.thesis_invalidation_triggers,
+                    created_at=opp.created_at,
+                )
+                for opp in items
+            ],
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute intelligence scan: {str(e)}",
+        )
+

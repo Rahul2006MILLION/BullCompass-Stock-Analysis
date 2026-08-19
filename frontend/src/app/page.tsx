@@ -14,6 +14,7 @@ import { SellModal } from "@/components/portfolio/SellModal";
 import { EditHoldingModal } from "@/components/portfolio/EditHoldingModal";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { AISuggestionsSection } from "@/components/intelligence/AISuggestionsSection";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useLiveQuotes } from "@/lib/useLiveQuotes";
@@ -236,7 +237,18 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
 
-        {/* 4. Active Holdings Grid */}
+        {/* 4. AI Suggestions Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+          className="pt-2"
+        >
+          <AISuggestionsSection />
+        </motion.div>
+
+        {/* 5. Active Holdings Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

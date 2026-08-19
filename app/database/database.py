@@ -144,4 +144,39 @@ class Database:
             )
         """)
 
+        # Investment Opportunities table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS investment_opportunities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticker TEXT NOT NULL,
+                company_name TEXT NOT NULL,
+                sector TEXT NOT NULL,
+                industry TEXT NOT NULL,
+                recommendation TEXT NOT NULL,
+                conviction_score INTEGER NOT NULL,
+                time_horizon TEXT NOT NULL,
+                current_price REAL NOT NULL,
+                news_id TEXT,
+                news_title TEXT NOT NULL,
+                news_source TEXT NOT NULL,
+                news_published_at TEXT NOT NULL,
+                event_summary TEXT NOT NULL,
+                impact_direction TEXT NOT NULL,
+                impact_strength INTEGER NOT NULL,
+                transmission_mechanism TEXT NOT NULL,
+                scores_json TEXT NOT NULL,
+                metrics_json TEXT NOT NULL,
+                hard_gates_json TEXT NOT NULL,
+                is_owned INTEGER NOT NULL,
+                portfolio_quantity REAL,
+                portfolio_avg_buy_price REAL,
+                portfolio_allocation_pct REAL,
+                investment_thesis TEXT NOT NULL,
+                key_catalysts_json TEXT NOT NULL,
+                key_risks_json TEXT NOT NULL,
+                thesis_invalidation_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+
         self.connection.commit()

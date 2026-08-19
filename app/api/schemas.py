@@ -343,3 +343,75 @@ class PortfolioReconciliationResponse(BaseModel):
     timestamp: str
     items: List[ReconciliationItemResponse]
 
+
+# --- Investment Intelligence Schemas ---
+
+class IntelligenceScoreBreakdownResponse(BaseModel):
+    fundamental_score: int
+    earnings_quality_score: int
+    valuation_score: int
+    price_reaction_score: int
+    news_catalyst_score: int
+    overall_conviction: int
+
+
+class IntelligenceMetricsResponse(BaseModel):
+    revenue_cagr_3y: Optional[float] = None
+    profit_cagr_3y: Optional[float] = None
+    operating_margin: Optional[float] = None
+    net_margin: Optional[float] = None
+    roe: Optional[float] = None
+    roce: Optional[float] = None
+    debt_to_equity: Optional[float] = None
+    pe_ratio: Optional[float] = None
+    pb_ratio: Optional[float] = None
+    ev_to_ebitda: Optional[float] = None
+    cfo_to_pat_ratio: Optional[float] = None
+    price_change_5d: Optional[float] = None
+    current_price: float
+    market_cap_cr: float
+
+
+class HardGateTriggerResponse(BaseModel):
+    gate_name: str
+    description: str
+    impact_on_decision: str
+
+
+class InvestmentOpportunityResponse(BaseModel):
+    id: Optional[int] = None
+    ticker: str
+    company_name: str
+    sector: str
+    industry: str
+    recommendation: str
+    conviction_score: int
+    time_horizon: str
+    current_price: float
+    news_id: Optional[str] = None
+    news_title: str
+    news_source: str
+    news_published_at: str
+    event_summary: str
+    impact_direction: str
+    impact_strength: int
+    transmission_mechanism: str
+    scores: IntelligenceScoreBreakdownResponse
+    metrics: IntelligenceMetricsResponse
+    hard_gates_triggered: List[HardGateTriggerResponse]
+    is_owned: bool
+    portfolio_quantity: Optional[float] = None
+    portfolio_avg_buy_price: Optional[float] = None
+    portfolio_allocation_pct: Optional[float] = None
+    investment_thesis: str
+    key_catalysts: List[str]
+    key_risks: List[str]
+    thesis_invalidation_triggers: List[str]
+    created_at: str
+
+
+class OpportunitiesListResponse(BaseModel):
+    total: int
+    opportunities: List[InvestmentOpportunityResponse]
+
+

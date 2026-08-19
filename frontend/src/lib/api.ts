@@ -192,4 +192,34 @@ export const api = {
       method: "DELETE",
     });
   },
+
+  // AI Investment Intelligence
+  getIntelligenceOpportunities: (params?: {
+    limit?: number;
+    offset?: number;
+    recommendation?: string;
+    sector?: string;
+    search?: string;
+  }): Promise<import("@/types/intelligence").OpportunitiesListResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      if (params.limit) searchParams.append("limit", params.limit.toString());
+      if (params.offset) searchParams.append("offset", params.offset.toString());
+      if (params.recommendation && params.recommendation !== "ALL") searchParams.append("recommendation", params.recommendation);
+      if (params.sector && params.sector !== "ALL") searchParams.append("sector", params.sector);
+      if (params.search) searchParams.append("search", params.search);
+    }
+    const queryString = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return fetchJson<import("@/types/intelligence").OpportunitiesListResponse>(`/api/intelligence/opportunities${queryString}`);
+  },
+
+  getOpportunityDetail: (id: number): Promise<import("@/types/intelligence").InvestmentOpportunity> => {
+    return fetchJson<import("@/types/intelligence").InvestmentOpportunity>(`/api/intelligence/opportunity/${id}`);
+  },
+
+  scanIntelligence: (maxArticles: number = 6): Promise<import("@/types/intelligence").OpportunitiesListResponse> => {
+    return fetchJson<import("@/types/intelligence").OpportunitiesListResponse>(`/api/intelligence/scan?max_articles=${maxArticles}`, {
+      method: "POST",
+    });
+  },
 };

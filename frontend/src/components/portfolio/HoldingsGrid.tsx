@@ -63,7 +63,7 @@ export function HoldingsGrid({
 
   const totalPortfolioValue = useMemo(() => {
     return holdings.reduce(
-      (sum, h) => sum + (h.current_value || h.quantity * (h.current_price || h.average_buy_price)),
+      (sum, h) => sum + (h.current_value != null ? h.current_value : h.quantity * (h.current_price || h.average_buy_price)),
       0
     );
   }, [holdings]);
@@ -83,8 +83,8 @@ export function HoldingsGrid({
 
     result.sort((a, b) => {
       if (sortBy === "value") {
-        const valA = a.current_value || a.quantity * (a.current_price || a.average_buy_price);
-        const valB = b.current_value || b.quantity * (b.current_price || b.average_buy_price);
+        const valA = a.current_value != null ? a.current_value : a.quantity * (a.current_price || a.average_buy_price);
+        const valB = b.current_value != null ? b.current_value : b.quantity * (b.current_price || b.average_buy_price);
         return valB - valA;
       }
       if (sortBy === "profit") {

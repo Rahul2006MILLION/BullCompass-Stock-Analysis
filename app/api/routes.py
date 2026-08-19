@@ -8,6 +8,8 @@ from app.database.portfolio_history_repository import PortfolioHistoryRepository
 from app.database.portfolio_transaction_repository import PortfolioTransactionRepository
 from app.database.news_repository import NewsRepository
 from app.services.stock_service import StockService
+from app.services.canonical_valuation_service import CanonicalValuationService
+from app.services.market_session import MarketSessionManager
 from app.services.ollama_service import OllamaService
 from app.services.news_service import NewsService
 from app.services.research_coordinator import ResearchCoordinatorService
@@ -45,6 +47,8 @@ from app.api.schemas import (
     QuoteItemResponse,
     MarketStatusResponse,
     BatchQuotesResponse,
+    ReconciliationItemResponse,
+    PortfolioReconciliationResponse,
 )
 
 router = APIRouter(prefix="/api", tags=["portfolio"])
@@ -76,7 +80,8 @@ def get_decision_agent() -> DecisionAgent:
 
 
 def get_news_service() -> NewsService:
-    return NewsService()
+    repo = NewsRepository()
+    return NewsService(repo)
 
 
 def get_research_coordinator() -> ResearchCoordinatorService:
@@ -94,45 +99,42 @@ def get_watchlist_service() -> WatchlistService:
 @router.get("/portfolio", response_model=PortfolioSummaryResponse)
 def get_portfolio():
     """
-    Get full portfolio summary including live valuations, returns, and holdings.
+    Get full portfolio summary including canonical valuations, returns, and holdings.
+    Guarantees strict session freezing when the market is closed.
     """
     try:
-        agent = get_portfolio_agent()
+        repo = get_portfolio_repo()
         trans_repo = get_transaction_repo()
-        raw_portfolio = agent.get_holdings()
+        holdings = repo.get_holdings()
+
+        canonical_svc = CanonicalValuationService.get_instance()
+        val_result = canonical_svc.evaluate_portfolio(holdings)
 
         holdings_list = []
-        for item in raw_portfolio:
-            h = item["holding"]
+        for item in val_result.holdings:
+            h = item.holding
             holdings_list.append(
                 HoldingItemResponse(
                     id=h.id,
                     ticker=h.ticker,
                     quantity=h.quantity,
                     average_buy_price=h.average_buy_price,
-                    current_price=item.get("current_price"),
-                    invested=item.get("invested"),
-                    current_value=item.get("current_value"),
-                    profit=item.get("profit"),
-                    returns=item.get("returns"),
+                    current_price=item.current_price,
+                    invested=item.invested,
+                    current_value=item.current_value,
+                    profit=item.profit,
+                    returns=item.returns,
                 )
             )
 
-        total_holdings = len(holdings_list)
-        total_invested = sum(item.invested or 0 for item in holdings_list)
-        total_current_value = sum(item.current_value or 0 for item in holdings_list)
-        total_unrealized_profit = total_current_value - total_invested
-        total_return_percentage = (
-            (total_unrealized_profit / total_invested) * 100 if total_invested > 0 else 0.0
-        )
         total_realized_profit = trans_repo.get_realized_profit() or 0.0
 
         return PortfolioSummaryResponse(
-            total_holdings=total_holdings,
-            total_invested=total_invested,
-            total_current_value=total_current_value,
-            total_unrealized_profit=total_unrealized_profit,
-            total_return_percentage=total_return_percentage,
+            total_holdings=val_result.total_holdings,
+            total_invested=val_result.total_invested,
+            total_current_value=val_result.total_current_value,
+            total_unrealized_profit=val_result.total_unrealized_profit,
+            total_return_percentage=val_result.total_return_percentage,
             total_realized_profit=total_realized_profit,
             holdings=holdings_list,
         )
@@ -140,6 +142,72 @@ def get_portfolio():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch portfolio: {str(e)}",
+        )
+
+
+@router.get("/portfolio/reconciliation", response_model=PortfolioReconciliationResponse)
+def get_portfolio_reconciliation():
+    """
+    Diagnostic reconciliation endpoint comparing database quantities, active provider prices,
+    calculated values, price types, full holding telemetry, and portfolio totals.
+    """
+    try:
+        repo = get_portfolio_repo()
+        holdings = repo.get_holdings()
+        
+        canonical_svc = CanonicalValuationService.get_instance()
+        val_result = canonical_svc.evaluate_portfolio(holdings)
+        session_info = val_result.session_info
+
+        items = []
+        for item in val_result.holdings:
+            h = item.holding
+            t = item.telemetry
+            items.append(
+                ReconciliationItemResponse(
+                    id=h.id,
+                    ticker=h.ticker,
+                    symbol_token=t.symbol_token,
+                    quantity=h.quantity,
+                    average_buy_price=h.average_buy_price,
+                    invested=item.invested,
+                    provider=t.quote_source,
+                    price=item.current_price,
+                    close=t.close,
+                    price_type="LTP" if session_info.is_open else "OFFICIAL_CLOSE",
+                    current_value=item.current_value,
+                    profit=item.profit,
+                    returns=item.returns,
+                    exch_feed_time=t.exch_feed_time,
+                    exch_trade_time=t.exch_trade_time,
+                    api_response_timestamp=t.api_response_timestamp,
+                    server_timestamp=t.server_timestamp,
+                    quote_source=t.quote_source,
+                    cache_timestamp=t.cache_timestamp,
+                    session_state=t.session_state,
+                    session_id=t.session_id,
+                    timestamp=t.server_timestamp,
+                )
+            )
+
+        from datetime import datetime, timezone
+        return PortfolioReconciliationResponse(
+            total_holdings=val_result.total_holdings,
+            total_invested=val_result.total_invested,
+            total_current_value=val_result.total_current_value,
+            total_unrealized_profit=val_result.total_unrealized_profit,
+            total_return_percentage=val_result.total_return_percentage,
+            market_status=session_info.status,
+            session_id=session_info.session_id,
+            is_frozen=session_info.is_frozen,
+            active_provider="AngelOneMarketDataProvider",
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            items=items,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate reconciliation report: {str(e)}",
         )
 
 
@@ -728,11 +796,18 @@ def get_batch_quotes_post(payload: BatchQuotesRequest):
             quote_items[ticker] = QuoteItemResponse(
                 ticker=q.get("ticker", ticker),
                 resolved_ticker=q.get("resolved_ticker", ticker),
+                trading_symbol=q.get("trading_symbol"),
+                symbol_token=q.get("symbol_token"),
                 current_price=q.get("current_price"),
+                ltp=q.get("ltp") or q.get("current_price"),
+                bid=q.get("bid"),
+                ask=q.get("ask"),
                 previous_close=q.get("previous_close"),
                 change=q.get("change"),
                 change_percent=q.get("change_percent"),
                 timestamp=q.get("timestamp", ""),
+                provider=q.get("provider", "angelone"),
+                price_type=q.get("price_type", "LTP"),
             )
 
         return BatchQuotesResponse(

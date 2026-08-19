@@ -279,11 +279,18 @@ class BatchQuotesRequest(BaseModel):
 class QuoteItemResponse(BaseModel):
     ticker: str
     resolved_ticker: str
+    trading_symbol: Optional[str] = None
+    symbol_token: Optional[str] = None
     current_price: Optional[float] = None
+    ltp: Optional[float] = None
+    bid: Optional[float] = None
+    ask: Optional[float] = None
     previous_close: Optional[float] = None
     change: Optional[float] = None
     change_percent: Optional[float] = None
     timestamp: str
+    provider: Optional[str] = "angelone"
+    price_type: Optional[str] = "LTP"
 
 
 class MarketStatusResponse(BaseModel):
@@ -296,4 +303,43 @@ class MarketStatusResponse(BaseModel):
 class BatchQuotesResponse(BaseModel):
     quotes: Dict[str, QuoteItemResponse]
     market_status: MarketStatusResponse
+
+
+class ReconciliationItemResponse(BaseModel):
+    id: Optional[int]
+    ticker: str
+    symbol_token: Optional[str] = None
+    quantity: float
+    average_buy_price: float
+    invested: float
+    provider: str
+    price: Optional[float]
+    close: Optional[float] = None
+    price_type: str
+    current_value: Optional[float]
+    profit: Optional[float]
+    returns: Optional[float]
+    exch_feed_time: Optional[str] = None
+    exch_trade_time: Optional[str] = None
+    api_response_timestamp: Optional[str] = None
+    server_timestamp: Optional[str] = None
+    quote_source: Optional[str] = None
+    cache_timestamp: Optional[str] = None
+    session_state: Optional[str] = None
+    session_id: Optional[str] = None
+    timestamp: str
+
+
+class PortfolioReconciliationResponse(BaseModel):
+    total_holdings: int
+    total_invested: float
+    total_current_value: float
+    total_unrealized_profit: float
+    total_return_percentage: float
+    market_status: str
+    session_id: Optional[str] = None
+    is_frozen: Optional[bool] = None
+    active_provider: str
+    timestamp: str
+    items: List[ReconciliationItemResponse]
 

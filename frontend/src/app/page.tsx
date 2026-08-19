@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useLiveQuotes } from "@/lib/useLiveQuotes";
-import { QuoteItem } from "@/types/market";
+import { QuoteItem, MarketStatus } from "@/types/market";
 import { PortfolioSummary, PortfolioHistorySnapshot, HoldingItem } from "@/types/portfolio";
 import { ArrowRight, Sparkles, RefreshCw, Activity } from "lucide-react";
 import Link from "next/link";
@@ -39,79 +39,6 @@ export default function DashboardPage() {
     return portfolio?.holdings?.map((h) => h.ticker) || [];
   }, [portfolio?.holdings]);
 
-  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>) => {
-    setPortfolio((prev) => {
-      if (!prev || !prev.holdings) return prev;
-
-      let changed = false;
-      const updatedHoldings = prev.holdings.map((h) => {
-        const quote = quotesMap[h.ticker.toUpperCase()];
-        if (quote && quote.current_price !== null && quote.current_price > 0 && quote.current_price !== h.current_price) {
-          changed = true;
-          const newPrice = quote.current_price;
-          const invested = h.invested ?? h.quantity * h.average_buy_price;
-          const currentValue = h.quantity * newPrice;
-          const profit = currentValue - invested;
-          const returns = invested > 0 ? (profit / invested) * 100 : 0;
-
-          return {
-            ...h,
-            current_price: newPrice,
-            invested,
-            current_value: currentValue,
-            profit,
-            returns,
-          };
-        }
-        return h;
-      });
-
-      if (!changed) return prev;
-
-      const totalHoldings = updatedHoldings.length;
-      const totalInvested = updatedHoldings.reduce(
-        (sum, h) => sum + (h.invested ?? h.quantity * h.average_buy_price),
-        0
-      );
-      const totalCurrentValue = updatedHoldings.reduce(
-        (sum, h) => sum + (h.current_value ?? (h.current_price ? h.quantity * h.current_price : h.quantity * h.average_buy_price)),
-        0
-      );
-      const totalUnrealizedProfit = totalCurrentValue - totalInvested;
-      const totalReturnPercentage = totalInvested > 0 ? (totalUnrealizedProfit / totalInvested) * 100 : 0;
-
-      // Also dynamically update the latest point in history chart for live continuous tracking
-      setHistory((prevHist) => {
-        if (!prevHist || prevHist.length === 0) return prevHist;
-        const nextHist = [...prevHist];
-        const lastIdx = nextHist.length - 1;
-        nextHist[lastIdx] = {
-          ...nextHist[lastIdx],
-          net_worth: totalCurrentValue,
-          profit: totalUnrealizedProfit,
-          return_percentage: totalReturnPercentage,
-        };
-        return nextHist;
-      });
-
-      return {
-        ...prev,
-        total_holdings: totalHoldings,
-        total_invested: totalInvested,
-        total_current_value: totalCurrentValue,
-        total_unrealized_profit: totalUnrealizedProfit,
-        total_return_percentage: totalReturnPercentage,
-        holdings: updatedHoldings,
-      };
-    });
-  }, []);
-
-  const { isPolling, syncNow, lastSyncTime } = useLiveQuotes({
-    tickers: holdingTickers,
-    intervalMs: 10000,
-    onQuotesUpdated: handleQuotesUpdated,
-  });
-
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -119,6 +46,11 @@ export default function DashboardPage() {
         api.getPortfolio(),
         api.getPortfolioHistory(),
       ]);
+      console.log("[DASHBOARD] Received canonical portfolio:", {
+        total_current_value: portfolioData.total_current_value,
+        total_invested: portfolioData.total_invested,
+        total_unrealized_profit: portfolioData.total_unrealized_profit,
+      });
       setPortfolio(portfolioData);
       setHistory(historyData);
     } catch (err: any) {
@@ -127,6 +59,19 @@ export default function DashboardPage() {
       setIsLoading(false);
     }
   }, [error]);
+
+  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>, status?: MarketStatus | null) => {
+    // Only re-fetch backend canonical valuation when market is actively OPEN
+    if (status?.is_open) {
+      fetchData();
+    }
+  }, [fetchData]);
+
+  const { isPolling, syncNow, lastSyncTime } = useLiveQuotes({
+    tickers: holdingTickers,
+    intervalMs: 10000,
+    onQuotesUpdated: handleQuotesUpdated,
+  });
 
   useEffect(() => {
     fetchData();

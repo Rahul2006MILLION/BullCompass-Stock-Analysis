@@ -33,9 +33,9 @@ export function AllocationDonut({ holdings, totalValue }: AllocationDonutProps) 
   }
 
   const chartData = holdings
-    .filter((h) => (h.current_value || h.invested || 0) > 0)
+    .filter((h) => (h.current_value != null ? h.current_value : (h.invested || 0)) > 0)
     .map((h) => {
-      const val = h.current_value || (h.quantity * h.average_buy_price);
+      const val = h.current_value != null ? h.current_value : (h.quantity * h.average_buy_price);
       const percent = totalValue > 0 ? (val / totalValue) * 100 : 0;
       return {
         name: h.ticker,

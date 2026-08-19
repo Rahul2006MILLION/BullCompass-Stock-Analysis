@@ -1,20 +1,29 @@
 from datetime import datetime
+from typing import Optional
 
 from app.database.portfolio_history_repository import PortfolioHistoryRepository
 from app.database.portfolio_repository import PortfolioRepository
 from app.database.portfolio_transaction_repository import PortfolioTransactionRepository
 from app.models.portfolio import PortfolioHolding
 from app.services.stock_service import StockService
+from app.services.canonical_valuation_service import CanonicalValuationService
 
 
 class PortfolioAgent:
     """
     Handles all portfolio-related business logic.
+    Delegates all valuations to the CanonicalValuationService single source of truth.
     """
 
-    def __init__(self, repository: PortfolioRepository):
+    def __init__(
+        self,
+        repository: PortfolioRepository,
+        stock_service: Optional[StockService] = None,
+        canonical_service: Optional[CanonicalValuationService] = None,
+    ):
         self.repository = repository
-        self.stock_service = StockService()
+        self.stock_service = stock_service or StockService()
+        self.canonical_service = canonical_service or CanonicalValuationService.get_instance()
         self.history_repository = PortfolioHistoryRepository()
         self.transaction_repository = PortfolioTransactionRepository()
 
@@ -36,41 +45,24 @@ class PortfolioAgent:
 
     def get_holdings(self) -> list[dict]:
         """
-        Return every holding together with live market calculations.
+        Return every holding together with canonical live market calculations.
         """
         holdings = self.repository.get_holdings()
         if not holdings:
             return []
 
-        tickers = [h.ticker for h in holdings]
-        quotes_map = self.stock_service.get_batch_quotes(tickers)
+        val_result = self.canonical_service.evaluate_portfolio(holdings)
 
         portfolio = []
-        for holding in holdings:
-            clean_ticker = holding.ticker.strip().upper()
-            quote = quotes_map.get(clean_ticker, {})
-            current_price = quote.get("current_price")
-
-            if current_price is not None and current_price > 0:
-                invested = holding.quantity * holding.average_buy_price
-                current_value = holding.quantity * current_price
-                profit = current_value - invested
-                returns = (profit / invested) * 100 if invested > 0 else 0
-            else:
-                current_price = None
-                invested = None
-                current_value = None
-                profit = None
-                returns = None
-
+        for item in val_result.holdings:
             portfolio.append(
                 {
-                    "holding": holding,
-                    "current_price": current_price,
-                    "invested": invested,
-                    "current_value": current_value,
-                    "profit": profit,
-                    "returns": returns,
+                    "holding": item.holding,
+                    "current_price": item.current_price,
+                    "invested": item.invested,
+                    "current_value": item.current_value,
+                    "profit": item.profit,
+                    "returns": item.returns,
                 }
             )
 
@@ -101,29 +93,13 @@ class PortfolioAgent:
 
     def save_portfolio_snapshot(self):
         """
-        Save the current portfolio snapshot.
+        Save the current portfolio snapshot using canonical evaluation.
         """
+        holdings = self.repository.get_holdings()
+        if not holdings:
+            return
 
-        portfolio = self.get_holdings()
-
-        invested_amount = sum(
-            item["invested"] or 0
-            for item in portfolio
-        )
-
-        net_worth = sum(
-            item["current_value"] or 0
-            for item in portfolio
-        )
-
-        profit = net_worth - invested_amount
-
-        if invested_amount > 0:
-            return_percentage = (
-                profit / invested_amount
-            ) * 100
-        else:
-            return_percentage = 0
+        val_result = self.canonical_service.evaluate_portfolio(holdings)
 
         timestamp = datetime.now().strftime(
             "%Y-%m-%d %H:%M:%S"
@@ -131,10 +107,10 @@ class PortfolioAgent:
 
         self.history_repository.save_snapshot(
             timestamp=timestamp,
-            invested_amount=invested_amount,
-            net_worth=net_worth,
-            profit=profit,
-            return_percentage=return_percentage,
+            invested_amount=val_result.total_invested,
+            net_worth=val_result.total_current_value,
+            profit=val_result.total_unrealized_profit,
+            return_percentage=val_result.total_return_percentage,
         )
 
     def buy_stock(

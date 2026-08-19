@@ -19,6 +19,11 @@ env/
 *.sqlite
 *.sqlite3
 
+# Data cache
+data/
+app/data/
+*.json.cache
+
 # macOS
 .DS_Store
 

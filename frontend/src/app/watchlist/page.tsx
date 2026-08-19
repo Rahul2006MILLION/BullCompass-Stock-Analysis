@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useLiveQuotes } from "@/lib/useLiveQuotes";
-import { QuoteItem } from "@/types/market";
+import { QuoteItem, MarketStatus } from "@/types/market";
 import { WatchlistItem } from "@/types/watchlist";
 import { HoldingItem } from "@/types/portfolio";
 import {
@@ -46,7 +46,12 @@ export default function WatchlistPage() {
     return items.map((i) => i.ticker);
   }, [items]);
 
-  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>) => {
+  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>, status?: MarketStatus | null) => {
+    // If market is CLOSED, strictly DO NOT recalculate or mutate watchlist prices
+    if (status && !status.is_open) {
+      return;
+    }
+
     setItems((prevItems) => {
       if (!prevItems || prevItems.length === 0) return prevItems;
 

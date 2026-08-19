@@ -43,7 +43,7 @@ export function Header({ onOpenAddModal, onOpenQuickTrade }: HeaderProps) {
     return (val ?? 0) >= 0;
   }
 
-  const isMarketOpen = marketStatus ? marketStatus.is_open : true;
+  const isMarketOpen = marketStatus ? marketStatus.is_open : false;
 
   return (
     <header className="h-16 apple-liquid-header px-6 flex items-center justify-between sticky top-3 z-30 select-none shadow-xl mb-4">
@@ -94,37 +94,37 @@ export function Header({ onOpenAddModal, onOpenQuickTrade }: HeaderProps) {
         {/* Live Status Pulse Badge */}
         <div
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold border hidden lg:flex ${
-            isMarketOpen
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
-              : "bg-amber-500/10 text-amber-400 border-amber-500/25"
+            !isMarketOpen
+              ? "bg-amber-500/10 text-amber-400 border-amber-500/25"
+              : isPolling
+              ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/25"
+              : "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
           }`}
           title={
             marketStatus
               ? `Indian Market: ${marketStatus.status} (${marketStatus.current_time_ist})`
-              : "Live Quote Polling Active (10s interval)"
+              : "Indian Market: CLOSED"
           }
         >
           <span className="relative flex h-2 w-2">
-            <span
-              className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                isPolling
-                  ? "bg-cyan-400"
-                  : isMarketOpen
-                  ? "bg-emerald-400"
-                  : "bg-amber-400"
-              }`}
-            />
+            {isMarketOpen && (
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  isPolling ? "bg-cyan-400" : "bg-emerald-400"
+                }`}
+              />
+            )}
             <span
               className={`relative inline-flex rounded-full h-2 w-2 ${
-                isPolling
+                !isMarketOpen
+                  ? "bg-amber-500"
+                  : isPolling
                   ? "bg-cyan-400"
-                  : isMarketOpen
-                  ? "bg-emerald-500"
-                  : "bg-amber-500"
+                  : "bg-emerald-500"
               }`}
             />
           </span>
-          <span>{isPolling ? "SYNCING" : isMarketOpen ? "LIVE 10s" : "CLOSED"}</span>
+          <span>{!isMarketOpen ? "CLOSED" : isPolling ? "SYNCING" : "LIVE 10s"}</span>
         </div>
       </div>
 

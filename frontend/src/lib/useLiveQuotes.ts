@@ -42,6 +42,9 @@ export function useLiveQuotes({
   const tickersRef = useRef(tickers);
   tickersRef.current = tickers;
 
+  const marketStatusRef = useRef<MarketStatus | null>(null);
+  marketStatusRef.current = marketStatus;
+
   const onQuotesUpdatedRef = useRef(onQuotesUpdated);
   onQuotesUpdatedRef.current = onQuotesUpdated;
 
@@ -51,13 +54,21 @@ export function useLiveQuotes({
       return;
     }
 
+    // If market is known to be CLOSED and this is an automatic background fetch, skip entirely
+    if (!isManual && marketStatusRef.current && !marketStatusRef.current.is_open) {
+      return;
+    }
+
     if (isFetchingRef.current) {
       return;
     }
 
     try {
       isFetchingRef.current = true;
-      setIsPolling(true);
+      // Only show polling/syncing state if market is open or triggered manually
+      if (isManual || !marketStatusRef.current || marketStatusRef.current.is_open) {
+        setIsPolling(true);
+      }
 
       const response = await api.getBatchQuotes(currentTickers);
 
@@ -100,39 +111,42 @@ export function useLiveQuotes({
     await fetchQuotes(true);
   }, [fetchQuotes]);
 
-  // Main polling effect with tab visibility handling
+  // Main polling effect: Strictly only poll if enabled, tickers present, and market is OPEN
   useEffect(() => {
     if (!enabled || tickers.length === 0) {
       return;
     }
 
-    // Initial silent poll if tickers change
-    fetchQuotes();
+    // Initial single fetch if market status is not yet determined
+    if (!marketStatus) {
+      fetchQuotes(false);
+      return;
+    }
 
-    // Determine current effective polling interval
-    const effectiveInterval =
-      marketStatus && !marketStatus.is_open
-        ? Math.max(intervalMs, CLOSED_MARKET_POLL_INTERVAL_MS)
-        : intervalMs;
+    // If market is CLOSED, strictly DO NOT set any interval timer or poll
+    if (!marketStatus.is_open) {
+      return;
+    }
 
-    let timerId: NodeJS.Timeout | null = setInterval(() => {
+    // Market is OPEN: Poll at intervalMs
+    const timerId: NodeJS.Timeout = setInterval(() => {
       // Only poll when page tab is active and visible
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        fetchQuotes();
+        fetchQuotes(false);
       }
-    }, effectiveInterval);
+    }, intervalMs);
 
     // Event listener for tab visibility change
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchQuotes();
+        fetchQuotes(false);
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      if (timerId) clearInterval(timerId);
+      clearInterval(timerId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [enabled, JSON.stringify(tickers), intervalMs, marketStatus?.is_open, fetchQuotes]);
@@ -140,7 +154,7 @@ export function useLiveQuotes({
   return {
     quotes,
     marketStatus,
-    isPolling,
+    isPolling: marketStatus?.is_open ? isPolling : false,
     lastSyncTime,
     error,
     syncNow,

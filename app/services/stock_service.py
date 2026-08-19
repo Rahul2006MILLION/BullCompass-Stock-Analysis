@@ -1,40 +1,75 @@
+import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import yfinance as yf
 
+from app.config import settings
 from app.models.company import Company
 from app.services.ticker_service import TickerService
+from app.services.market_data.base import MarketDataProvider, NormalizedQuote
+from app.services.market_data.factory import get_market_data_provider
+from app.services.canonical_valuation_service import CanonicalValuationService
+from app.services.market_session import MarketSessionManager
+
+logger = logging.getLogger(__name__)
 
 
 class StockService:
+    """
+    Core stock service in BullCompass.
+    Delegates all quote acquisition to the CanonicalValuationService, ensuring
+    strict session freezing when the market is closed, identical pricing across endpoints,
+    and authoritative Angel One LTP valuation when the market is open.
+    """
+
+    def __init__(
+        self,
+        provider: Optional[MarketDataProvider] = None,
+        canonical_service: Optional[CanonicalValuationService] = None,
+    ):
+        self.provider = provider or get_market_data_provider()
+        if canonical_service is not None:
+            self.canonical_service = canonical_service
+        elif provider is not None:
+            self.canonical_service = CanonicalValuationService(provider=self.provider)
+        else:
+            self.canonical_service = CanonicalValuationService.get_instance()
+        self.session_manager = self.canonical_service.session_manager
 
     def get_company_info(self, ticker: str) -> Company:
+        """
+        Fetch company metadata and current live market valuation.
+        """
         resolved_ticker = TickerService.resolve(ticker)
+        
+        # 1. Fetch live quote through canonical market data provider
+        quote = self.provider.get_quote(ticker)
+        current_price = quote.ltp if quote and quote.ltp and quote.ltp > 0 else None
+
+        # 2. Fetch company profile metadata via yfinance
         stock = yf.Ticker(resolved_ticker)
         info = stock.info or {}
-
         if not isinstance(info, dict):
             info = {}
 
         name = info.get("longName") or info.get("shortName") or ""
-        
-        current_price = (
-            info.get("currentPrice")
-            or info.get("regularMarketPrice")
-            or info.get("previousClose")
-            or info.get("open")
-        )
-
-        if current_price is None or float(current_price) <= 0.0:
-            try:
-                current_price = self.get_current_price(resolved_ticker)
-            except Exception:
-                current_price = 0.0
-
         market_cap = info.get("marketCap", 0) or 0
 
-        # Strict validation: listed stock must have a valid company name and positive price
+        # Fallback for price if provider was unavailable
+        if current_price is None or current_price <= 0.0:
+            current_price = (
+                info.get("currentPrice")
+                or info.get("regularMarketPrice")
+                or info.get("previousClose")
+                or info.get("open")
+            )
+            if current_price is None or float(current_price) <= 0.0:
+                try:
+                    current_price = self.get_current_price(resolved_ticker)
+                except Exception:
+                    current_price = 0.0
+
         if not name or float(current_price) <= 0.0:
             raise ValueError(f"We couldn't find a listed stock matching '{ticker}'.")
 
@@ -50,15 +85,25 @@ class StockService:
         )
 
     def get_current_price(self, ticker: str) -> float:
-        resolved_ticker = TickerService.resolve(ticker)
-        stock = yf.Ticker(resolved_ticker)
+        """
+        Fetch single stock current price.
+        """
+        quotes_dict, _, _ = self.canonical_service.get_canonical_quotes([ticker])
+        clean = ticker.strip().upper()
+        if clean in quotes_dict and quotes_dict[clean].get("current_price"):
+            return float(quotes_dict[clean]["current_price"])
 
-        history = stock.history(period="1d")
+        quote = self.provider.get_quote(ticker)
+        if quote and quote.ltp and quote.ltp > 0:
+            return float(quote.ltp)
 
-        if history.empty:
+        # Fallback to history
+        resolved = TickerService.resolve(ticker)
+        df = self.provider.get_history(resolved, period="5d")
+        if df.empty or "Close" not in df:
             raise ValueError(f"Could not fetch price for {ticker}")
 
-        price = float(history["Close"].iloc[-1])
+        price = float(df["Close"].dropna().iloc[-1])
         if price <= 0.0:
             raise ValueError(f"Invalid price {price} for {ticker}")
 
@@ -66,125 +111,26 @@ class StockService:
 
     def get_batch_quotes(self, tickers: List[str]) -> Dict[str, Dict[str, Any]]:
         """
-        Fetches quotes in a single batch call using yf.download.
-        Returns a dict keyed by the requested ticker with current price, previous close, change, and change %.
+        Fetches quotes through the CanonicalValuationService.
+        Guarantees that when market is closed, quotes remain locked and frozen.
         """
         if not tickers:
             return {}
-
-        resolved_map: Dict[str, str] = {}
-        for t in tickers:
-            clean = t.strip().upper()
-            if not clean:
-                continue
-            if "." in clean or clean.startswith("^"):
-                resolved = clean
-            else:
-                resolved = f"{clean}.NS"
-            resolved_map[clean] = resolved
-
-        unique_resolved = list(set(resolved_map.values()))
-        results: Dict[str, Dict[str, Any]] = {}
-        data = None
-
-        try:
-            data = yf.download(unique_resolved, period="5d", progress=False)
-        except Exception:
-            data = None
-
-        iso_timestamp = datetime.now(timezone.utc).isoformat()
-
-        for orig, resolved in resolved_map.items():
-            curr_price: Optional[float] = None
-            prev_close: Optional[float] = None
-            change: float = 0.0
-            pct_change: float = 0.0
-
-            if data is not None and not data.empty and "Close" in data:
-                try:
-                    close_obj = data["Close"]
-                    closes = None
-                    if isinstance(close_obj, pd.DataFrame):
-                        if resolved in close_obj.columns:
-                            closes = close_obj[resolved].dropna()
-                        else:
-                            for col in close_obj.columns:
-                                if str(col).upper() == resolved.upper():
-                                    closes = close_obj[col].dropna()
-                                    break
-                    elif isinstance(close_obj, pd.Series):
-                        closes = close_obj.dropna()
-
-                    if closes is not None and not closes.empty:
-                        if len(closes) >= 2:
-                            prev_close = float(closes.iloc[-2])
-                            curr_price = float(closes.iloc[-1])
-                            change = curr_price - prev_close
-                            pct_change = (change / prev_close) * 100.0 if prev_close > 0 else 0.0
-                        else:
-                            curr_price = float(closes.iloc[-1])
-                except Exception:
-                    pass
-
-            # Fallback if download missed this ticker
-            if curr_price is None or curr_price <= 0.0:
-                try:
-                    fallback_price = self.get_current_price(resolved)
-                    if fallback_price > 0.0:
-                        curr_price = fallback_price
-                except Exception:
-                    pass
-
-            results[orig] = {
-                "ticker": orig,
-                "resolved_ticker": resolved,
-                "current_price": round(curr_price, 2) if curr_price is not None else None,
-                "previous_close": round(prev_close, 2) if prev_close is not None else None,
-                "change": round(change, 2) if change is not None else 0.0,
-                "change_percent": round(pct_change, 2) if pct_change is not None else 0.0,
-                "timestamp": iso_timestamp,
-            }
-
-        return results
+        quotes_dict, _, _ = self.canonical_service.get_canonical_quotes(tickers)
+        return quotes_dict
 
     @staticmethod
     def is_indian_market_open() -> Dict[str, Any]:
         """
-        Determines whether the Indian stock market (NSE/BSE) is currently open.
-        Regular hours: Monday-Friday 09:15 to 15:30 IST.
+        Determines whether the Indian stock market (NSE/BSE) is currently open via MarketSessionManager.
         """
-        ist = timezone(timedelta(hours=5, minutes=30))
-        now_ist = datetime.now(ist)
-        weekday = now_ist.weekday()  # 0=Monday, 6=Sunday
-
-        is_weekday = weekday < 5
-        current_time = now_ist.time()
-
-        from datetime import time
-        pre_market_start = time(9, 0)
-        market_open = time(9, 15)
-        market_close = time(15, 30)
-        post_market_end = time(16, 0)
-
-        if not is_weekday:
-            status = "CLOSED"
-            is_open = False
-        elif market_open <= current_time <= market_close:
-            status = "OPEN"
-            is_open = True
-        elif pre_market_start <= current_time < market_open:
-            status = "PRE_OPEN"
-            is_open = False
-        elif market_close < current_time <= post_market_end:
-            status = "POST_CLOSE"
-            is_open = False
-        else:
-            status = "CLOSED"
-            is_open = False
-
+        session_info = MarketSessionManager.get_instance().get_session_info()
         return {
-            "is_open": is_open,
-            "status": status,
-            "current_time_ist": now_ist.strftime("%Y-%m-%d %H:%M:%S IST"),
+            "is_open": session_info.is_open,
+            "status": session_info.status,
+            "current_time_ist": session_info.current_time_ist,
             "timezone": "Asia/Kolkata (IST)",
+            "session_id": session_info.session_id,
+            "is_frozen": session_info.is_frozen,
+            "next_session_start_ist": session_info.next_session_start_ist,
         }

@@ -28,7 +28,11 @@ export interface IntelligenceMetrics {
   pb_ratio: number | null;
   ev_to_ebitda: number | null;
   cfo_to_pat_ratio: number | null;
+  price_change_1d?: number | null;
   price_change_5d: number | null;
+  price_change_20d?: number | null;
+  distance_from_52w_high_pct?: number | null;
+  valuation_tier?: string;
   current_price: number;
   market_cap_cr: number;
 }
@@ -48,10 +52,14 @@ export interface InvestmentOpportunity {
   recommendation: RecommendationType;
   conviction_score: number;
   time_horizon: string;
+  catalyst_durability?: string;
+  valuation_tier?: string;
   current_price: number;
   news_id: string | null;
   news_title: string;
   news_source: string;
+  news_sources?: string[];
+  related_headlines?: string[];
   news_published_at: string;
   event_summary: string;
   impact_direction: string;
@@ -75,3 +83,4 @@ export interface OpportunitiesListResponse {
   total: number;
   opportunities: InvestmentOpportunity[];
 }
+

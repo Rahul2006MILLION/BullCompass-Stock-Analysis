@@ -30,7 +30,7 @@ class TimeHorizon(str, Enum):
 @dataclass
 class NewsEventExtraction:
     """
-    Structured extraction produced by Ollama from financial news.
+    Structured extraction produced by Ollama / Heuristic Engine from financial news.
     """
     event_type: str
     event_summary: str
@@ -44,6 +44,8 @@ class NewsEventExtraction:
     potential_losers: List[str]
     key_risks: List[str]
     confidence: int  # 0 to 100
+    catalyst_durability: str = "STRUCTURAL"  # STRUCTURAL vs TEMPORARY
+    thesis_invalidation_triggers: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -62,10 +64,14 @@ class QuantitativeFactors:
     pb_ratio: Optional[float]
     ev_to_ebitda: Optional[float]
     cfo_to_pat_ratio: Optional[float]  # Earnings quality indicator
-    price_change_5d: Optional[float]   # Recent price reaction (%)
+    price_change_5d: Optional[float]   # 5-day price reaction (%)
     current_price: float
     market_cap_cr: float
     is_financial_institution: bool = False
+    price_change_1d: Optional[float] = None
+    price_change_20d: Optional[float] = None
+    distance_from_52w_high_pct: Optional[float] = None
+    valuation_tier: str = "FAIRLY_VALUED"  # UNDERVALUED, FAIRLY_VALUED, EXPENSIVE, EXTREMELY_OVERVALUED
 
 
 @dataclass
@@ -128,6 +134,10 @@ class InvestmentOpportunity:
     thesis_invalidation_triggers: List[str]
     
     created_at: str
+    valuation_tier: str = "FAIRLY_VALUED"
+    catalyst_durability: str = "STRUCTURAL"
+    news_sources: List[str] = field(default_factory=list)
+    related_headlines: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -139,10 +149,14 @@ class InvestmentOpportunity:
             "recommendation": self.recommendation.value,
             "conviction_score": self.conviction_score,
             "time_horizon": self.time_horizon,
+            "catalyst_durability": self.catalyst_durability,
+            "valuation_tier": self.valuation_tier,
             "current_price": self.current_price,
             "news_id": self.news_id,
             "news_title": self.news_title,
             "news_source": self.news_source,
+            "news_sources": self.news_sources if self.news_sources else ([self.news_source] if self.news_source else []),
+            "related_headlines": self.related_headlines if self.related_headlines else ([self.news_title] if self.news_title else []),
             "news_published_at": self.news_published_at,
             "event_summary": self.event_summary,
             "impact_direction": self.impact_direction,
@@ -168,9 +182,14 @@ class InvestmentOpportunity:
                 "pb_ratio": self.metrics.pb_ratio,
                 "ev_to_ebitda": self.metrics.ev_to_ebitda,
                 "cfo_to_pat_ratio": self.metrics.cfo_to_pat_ratio,
+                "price_change_1d": self.metrics.price_change_1d,
                 "price_change_5d": self.metrics.price_change_5d,
+                "price_change_20d": self.metrics.price_change_20d,
+                "distance_from_52w_high_pct": self.metrics.distance_from_52w_high_pct,
+                "valuation_tier": self.metrics.valuation_tier,
                 "current_price": self.metrics.current_price,
                 "market_cap_cr": self.metrics.market_cap_cr,
+                "is_financial_institution": self.metrics.is_financial_institution,
             },
             "hard_gates_triggered": [
                 {

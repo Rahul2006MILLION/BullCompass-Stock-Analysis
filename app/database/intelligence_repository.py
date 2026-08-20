@@ -32,6 +32,8 @@ class IntelligenceRepository:
             "price_reaction_score": opp.scores.price_reaction_score,
             "news_catalyst_score": opp.scores.news_catalyst_score,
             "overall_conviction": opp.scores.overall_conviction,
+            "valuation_tier": opp.valuation_tier,
+            "catalyst_durability": opp.catalyst_durability,
         })
         metrics_json = json.dumps({
             "revenue_cagr_3y": opp.metrics.revenue_cagr_3y,
@@ -45,10 +47,16 @@ class IntelligenceRepository:
             "pb_ratio": opp.metrics.pb_ratio,
             "ev_to_ebitda": opp.metrics.ev_to_ebitda,
             "cfo_to_pat_ratio": opp.metrics.cfo_to_pat_ratio,
+            "price_change_1d": opp.metrics.price_change_1d,
             "price_change_5d": opp.metrics.price_change_5d,
+            "price_change_20d": opp.metrics.price_change_20d,
+            "distance_from_52w_high_pct": opp.metrics.distance_from_52w_high_pct,
+            "valuation_tier": opp.metrics.valuation_tier,
             "current_price": opp.metrics.current_price,
             "market_cap_cr": opp.metrics.market_cap_cr,
             "is_financial_institution": opp.metrics.is_financial_institution,
+            "news_sources": opp.news_sources,
+            "related_headlines": opp.related_headlines,
         })
         hard_gates_json = json.dumps([
             {
@@ -204,6 +212,18 @@ class IntelligenceRepository:
             overall_conviction=int(scores_dict.get("overall_conviction", 50)),
         )
 
+        valuation_tier = (
+            metrics_dict.get("valuation_tier")
+            or scores_dict.get("valuation_tier")
+            or "FAIRLY_VALUED"
+        )
+        catalyst_durability = (
+            scores_dict.get("catalyst_durability")
+            or "STRUCTURAL"
+        )
+        news_sources = metrics_dict.get("news_sources") or ([news_source] if news_source else [])
+        related_headlines = metrics_dict.get("related_headlines") or ([news_title] if news_title else [])
+
         metrics = QuantitativeFactors(
             revenue_cagr_3y=metrics_dict.get("revenue_cagr_3y"),
             profit_cagr_3y=metrics_dict.get("profit_cagr_3y"),
@@ -220,6 +240,10 @@ class IntelligenceRepository:
             current_price=float(metrics_dict.get("current_price", current_price)),
             market_cap_cr=float(metrics_dict.get("market_cap_cr", 0.0)),
             is_financial_institution=bool(metrics_dict.get("is_financial_institution", False)),
+            price_change_1d=metrics_dict.get("price_change_1d"),
+            price_change_20d=metrics_dict.get("price_change_20d"),
+            distance_from_52w_high_pct=metrics_dict.get("distance_from_52w_high_pct"),
+            valuation_tier=valuation_tier,
         )
 
         hard_gates = [
@@ -266,4 +290,8 @@ class IntelligenceRepository:
             key_risks=risks_list,
             thesis_invalidation_triggers=invalidation_list,
             created_at=created_at,
+            valuation_tier=valuation_tier,
+            catalyst_durability=catalyst_durability,
+            news_sources=news_sources,
+            related_headlines=related_headlines,
         )

@@ -271,6 +271,176 @@ class TestInvestmentIntelligence(unittest.TestCase):
         self.assertEqual(rec, RecommendationType.HOLD)
         self.assertTrue(any(g.gate_name == "PORTFOLIO_CONCENTRATION_LIMIT" for g in gates))
 
+    def test_stock_universe_33_sectors_and_beneficiary_loser_discovery(self):
+        """Test that StockUniverseRegistry covers 33 sectors and discovers beneficiaries/losers correctly."""
+        all_sectors = StockUniverseRegistry.get_all_sectors()
+        self.assertGreaterEqual(len(all_sectors), 30)
+        self.assertIn("Renewable & Clean Energy", all_sectors)
+        self.assertIn("Defence & Aerospace", all_sectors)
+        self.assertIn("Railways & Rail Infrastructure", all_sectors)
+        self.assertIn("Electronics Manufacturing Services (EMS) & Tech Hardware", all_sectors)
+
+        # Test macro shift: Crude oil rise -> Upstream beneficiaries vs Paint/Aviation/Tyre losers
+        crude_mapping = StockUniverseRegistry.find_beneficiaries_and_losers(
+            event_type="Commodity Price Move",
+            keywords=["crude oil", "brent", "petroleum"],
+            direction="POSITIVE",
+        )
+        ben_tickers = [b["ticker"] for b in crude_mapping["beneficiaries"]]
+        loser_tickers = [l["ticker"] for l in crude_mapping["losers"]]
+
+        self.assertTrue(any(t in ["ONGC", "OIL", "GAIL"] for t in ben_tickers))
+        self.assertTrue(any(t in ["ASIANPAINT", "BERGEPAINT", "INDIGO", "MRF", "APOLLOTYRE"] for t in loser_tickers))
+
+    def test_news_clustering(self):
+        """Test news clustering by entity and theme deduplication."""
+        from app.models.news import NewsItem
+        articles = [
+            NewsItem(
+                id="1",
+                title="RBI cuts repo rate by 25 bps in policy review",
+                source="Moneycontrol",
+                source_url="http://example.com/1",
+                published_at="2026-08-20T10:00:00Z",
+                fetched_at="2026-08-20T10:05:00Z",
+                category="Macro & Economy",
+                summary="Central bank lowers interest rates to spur investment.",
+            ),
+            NewsItem(
+                id="2",
+                title="RBI Policy: Repo rate reduced by 25 basis points to support growth",
+                source="LiveMint",
+                source_url="http://example.com/2",
+                published_at="2026-08-20T10:15:00Z",
+                fetched_at="2026-08-20T10:20:00Z",
+                category="Macro & Economy",
+                summary="Rate cut expected to lower borrowing costs for home loans and auto sector.",
+            ),
+            NewsItem(
+                id="3",
+                title="BEL bags ₹3,000 Cr defence contract from Ministry of Defence",
+                source="Economic Times",
+                source_url="http://example.com/3",
+                published_at="2026-08-20T11:00:00Z",
+                fetched_at="2026-08-20T11:05:00Z",
+                category="Sector & Industry",
+                summary="Order includes radar and electronic warfare systems.",
+            ),
+        ]
+
+        clusters = self.analyzer.cluster_news_items(articles)
+        self.assertEqual(len(clusters), 2)  # RBI articles clustered together, BEL separate
+
+    def test_hard_gate_price_overextended_blocks_chasing(self):
+        """
+        Hard Gate: >15% rally in 5D or >25% in 20D blocks BUY chasing and sets WATCH.
+        """
+        metrics = QuantitativeFactors(
+            revenue_cagr_3y=22.0,
+            profit_cagr_3y=28.0,
+            operating_margin=20.0,
+            net_margin=15.0,
+            roe=22.0,
+            roce=24.0,
+            debt_to_equity=0.1,
+            pe_ratio=25.0,
+            pb_ratio=3.5,
+            ev_to_ebitda=14.0,
+            cfo_to_pat_ratio=1.0,
+            price_change_5d=18.5,  # Surged 18.5% in 5 days
+            price_change_1d=4.2,
+            price_change_20d=28.0,
+            distance_from_52w_high_pct=-1.2,
+            valuation_tier="FAIRLY_VALUED",
+            current_price=1200.0,
+            market_cap_cr=50000.0,
+        )
+        news_event = NewsEventExtraction(
+            event_type="Order Win",
+            event_summary="Wins ₹5,000 Cr mega contract",
+            affected_sectors=["Defence & Aerospace"],
+            affected_tickers=["HAL"],
+            direction=EventDirection.POSITIVE,
+            impact_strength=9,
+            time_horizon="3-5 years",
+            mechanism="Adds 3 years of revenue visibility",
+            potential_beneficiaries=["HAL"],
+            potential_losers=[],
+            key_risks=[],
+            confidence=90,
+            catalyst_durability="STRUCTURAL",
+        )
+
+        scores = self.evaluator._compute_scores(metrics, None, news_event)
+        rec, gates = self.evaluator._determine_recommendation_and_gates(
+            metrics=metrics,
+            scores=scores,
+            news_event=news_event,
+            is_owned=False,
+            port_allocation_pct=0.0,
+        )
+
+        self.assertEqual(rec, RecommendationType.WATCH)
+        self.assertTrue(any(g.gate_name == "PRICE_OVEREXTENDED_GATE" for g in gates))
+
+    def test_symmetrical_loser_evaluation(self):
+        """
+        Loser with negative catalyst on non-owned stock must result in AVOID.
+        If owned, it should trigger REDUCE or SELL.
+        """
+        metrics = QuantitativeFactors(
+            revenue_cagr_3y=5.0,
+            profit_cagr_3y=-8.0,
+            operating_margin=8.0,
+            net_margin=4.0,
+            roe=6.0,
+            roce=7.0,
+            debt_to_equity=1.8,
+            pe_ratio=40.0,
+            pb_ratio=3.0,
+            ev_to_ebitda=18.0,
+            cfo_to_pat_ratio=0.4,
+            price_change_5d=-6.0,
+            current_price=200.0,
+            market_cap_cr=3000.0,
+        )
+        news_event = NewsEventExtraction(
+            event_type="Regulatory Penalty",
+            event_summary="Adverse tariff hike cuts export margins significantly",
+            affected_sectors=["General"],
+            affected_tickers=["TESTCORP"],
+            direction=EventDirection.NEGATIVE,
+            impact_strength=8,
+            time_horizon="6-12 months",
+            mechanism="Direct compression of operating margins",
+            potential_beneficiaries=[],
+            potential_losers=["TESTCORP"],
+            key_risks=["Margin squeeze", "Covenant breach"],
+            confidence=85,
+        )
+
+        scores = self.evaluator._compute_scores(metrics, None, news_event)
+
+        # Unowned -> AVOID
+        rec_unowned, _ = self.evaluator._determine_recommendation_and_gates(
+            metrics=metrics,
+            scores=scores,
+            news_event=news_event,
+            is_owned=False,
+            port_allocation_pct=0.0,
+        )
+        self.assertEqual(rec_unowned, RecommendationType.AVOID)
+
+        # Owned -> SELL or REDUCE
+        rec_owned, _ = self.evaluator._determine_recommendation_and_gates(
+            metrics=metrics,
+            scores=scores,
+            news_event=news_event,
+            is_owned=True,
+            port_allocation_pct=5.0,
+        )
+        self.assertIn(rec_owned, [RecommendationType.SELL, RecommendationType.REDUCE])
+
     def test_api_intelligence_endpoints(self):
         """Test API endpoints for investment intelligence."""
         # 1. Opportunities endpoint

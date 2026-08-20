@@ -7,20 +7,62 @@ import {
 } from "@/types/intelligence";
 import { OpportunityDetailModal } from "./OpportunityDetailModal";
 import { api } from "@/lib/api";
-import { Sparkles, RefreshCw, AlertTriangle, CheckCircle2, TrendingUp, ShieldAlert, ArrowRight, Layers } from "lucide-react";
+import {
+  Sparkles,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle2,
+  TrendingUp,
+  ShieldAlert,
+  ArrowRight,
+  Layers,
+  Compass,
+  Search,
+  Filter,
+  Flame,
+  Shield,
+  Zap,
+  Clock,
+  Coins,
+  BarChart3,
+  ExternalLink,
+} from "lucide-react";
 
 const SECTOR_OPTIONS = [
   "ALL",
   "Banking & Financial Services",
-  "Information Technology",
-  "Oil, Gas & Energy",
-  "Power & Renewable Energy",
-  "Infrastructure, Capital Goods & Construction",
-  "Automobile & Auto Components",
-  "Pharmaceuticals & Healthcare",
-  "Consumer Goods & Retail",
+  "NBFC & Housing Finance",
+  "Information Technology & SaaS",
+  "Oil, Gas & Refining",
+  "Power Generation & Distribution",
+  "Renewable Energy & Cleantech",
+  "Defence & Aerospace",
+  "Railways & Mass Transit",
+  "Automobile & EV Ecosystem",
+  "Auto Components & Ancillaries",
+  "Pharmaceuticals & API Manufacturing",
+  "Hospitals & Healthcare Diagnostics",
+  "Consumer Goods & FMCG",
+  "Consumer Discretionary & Retail",
   "Metals & Mining",
-  "Logistics, Ports & Transportation",
+  "Chemicals & Specialty Materials",
+  "Capital Goods & Industrial Machinery",
+  "Infrastructure & Construction",
+  "Real Estate & Urban Development",
+  "Telecommunications & 5G Infrastructure",
+  "Electronics Manufacturing Services (EMS)",
+  "Logistics & Supply Chain",
+  "Ports & Marine Infrastructure",
+  "Aviation & Airport Services",
+  "Cement & Building Materials",
+  "Agriculture, Fertilizers & Agrochemicals",
+  "Hotels & Hospitality",
+  "Textiles & Apparel Export",
+  "Paper & Packaging",
+  "Sugar & Biofuels",
+  "Media & Entertainment",
+  "Jewellery, Gems & Luxury",
+  "Diversified Conglomerates",
 ];
 
 const REC_OPTIONS: Array<"ALL" | RecommendationType> = [
@@ -34,13 +76,25 @@ const REC_OPTIONS: Array<"ALL" | RecommendationType> = [
   "AVOID",
 ];
 
+const TIME_HORIZON_OPTIONS = [
+  "ALL",
+  "1-3 months",
+  "6-12 months",
+  "1-3 years",
+  "3-5 years",
+];
+
+type CategoryTab = "ALL" | "TOP" | "DISCOVERIES" | "PORTFOLIO" | "RISKS";
+
 export const AISuggestionsSection: React.FC = () => {
   const [opportunities, setOpportunities] = useState<InvestmentOpportunity[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [scanning, setScanning] = useState<boolean>(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<InvestmentOpportunity | null>(null);
+  const [activeCategoryTab, setActiveCategoryTab] = useState<CategoryTab>("ALL");
   const [selectedRec, setSelectedRec] = useState<"ALL" | RecommendationType>("ALL");
   const [selectedSector, setSelectedSector] = useState<string>("ALL");
+  const [selectedHorizon, setSelectedHorizon] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [lastScannedAt, setLastScannedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,495 +115,600 @@ export const AISuggestionsSection: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchOpportunities();
-  }, []);
-
-  const handleTriggerScan = async () => {
+  const handleRunScan = async () => {
     try {
       setScanning(true);
       setError(null);
-      const data = await api.scanIntelligence(4);
+      const data = await api.scanIntelligence(20);
       setOpportunities(data.opportunities || []);
-      setLastScannedAt(new Date().toISOString());
+      if (data.opportunities && data.opportunities.length > 0) {
+        setLastScannedAt(data.opportunities[0].created_at);
+      }
     } catch (err: any) {
-      setError(err.message || "Scan failed.");
+      setError(err.message || "Intelligence scan failed.");
     } finally {
       setScanning(false);
     }
   };
 
+  useEffect(() => {
+    fetchOpportunities();
+  }, []);
+
+  // Filter Opportunities
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter((opp) => {
-      // Recommendation Filter
+      // 1. Category Tab Filter
+      if (activeCategoryTab === "TOP" && opp.conviction_score < 75) {
+        return false;
+      }
+      if (activeCategoryTab === "DISCOVERIES" && opp.is_owned) {
+        return false;
+      }
+      if (activeCategoryTab === "PORTFOLIO" && !opp.is_owned) {
+        return false;
+      }
+      if (
+        activeCategoryTab === "RISKS" &&
+        !["AVOID", "REDUCE", "SELL"].includes(opp.recommendation) &&
+        opp.impact_direction !== "NEGATIVE"
+      ) {
+        return false;
+      }
+
+      // 2. Recommendation Filter
       if (selectedRec !== "ALL" && opp.recommendation !== selectedRec) {
         return false;
       }
-      // Flexible Sector Filter
-      if (selectedSector !== "ALL") {
-        const sec1 = (opp.sector || "").toLowerCase();
-        const sec2 = selectedSector.toLowerCase();
-        const ind = (opp.industry || "").toLowerCase();
-        const match =
-          sec1.includes(sec2) ||
-          sec2.includes(sec1) ||
-          ind.includes(sec2) ||
-          (sec2.includes("tech") && (sec1.includes("tech") || ind.includes("tech") || ind.includes("software"))) ||
-          (sec2.includes("bank") && (sec1.includes("bank") || sec1.includes("financial") || ind.includes("bank"))) ||
-          (sec2.includes("infra") && (sec1.includes("basic") || sec1.includes("industrial") || ind.includes("material") || ind.includes("construction")));
 
-        if (!match) {
-          return false;
-        }
+      // 3. Sector Filter
+      if (selectedSector !== "ALL" && opp.sector !== selectedSector) {
+        return false;
       }
-      // Search Filter
+
+      // 4. Time Horizon Filter
+      if (selectedHorizon !== "ALL" && opp.time_horizon !== selectedHorizon) {
+        return false;
+      }
+
+      // 5. Search Query
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+        const q = searchQuery.toLowerCase();
         const matchesTicker = opp.ticker.toLowerCase().includes(q);
         const matchesName = opp.company_name.toLowerCase().includes(q);
         const matchesSector = opp.sector.toLowerCase().includes(q);
-        const matchesNews = opp.news_title.toLowerCase().includes(q);
+        const matchesEvent = opp.event_summary.toLowerCase().includes(q);
         const matchesThesis = opp.investment_thesis.toLowerCase().includes(q);
-        if (!matchesTicker && !matchesName && !matchesSector && !matchesNews && !matchesThesis) {
+        const matchesMech = opp.transmission_mechanism.toLowerCase().includes(q);
+        if (!matchesTicker && !matchesName && !matchesSector && !matchesEvent && !matchesThesis && !matchesMech) {
           return false;
         }
       }
+
       return true;
     });
-  }, [opportunities, selectedRec, selectedSector, searchQuery]);
+  }, [
+    opportunities,
+    activeCategoryTab,
+    selectedRec,
+    selectedSector,
+    selectedHorizon,
+    searchQuery,
+  ]);
 
-  const getRecBadge = (rec: RecommendationType) => {
+  // Tab counts
+  const categoryCounts = useMemo(() => {
+    return {
+      ALL: opportunities.length,
+      TOP: opportunities.filter((o) => o.conviction_score >= 75).length,
+      DISCOVERIES: opportunities.filter((o) => !o.is_owned).length,
+      PORTFOLIO: opportunities.filter((o) => o.is_owned).length,
+      RISKS: opportunities.filter(
+        (o) => ["AVOID", "REDUCE", "SELL"].includes(o.recommendation) || o.impact_direction === "NEGATIVE"
+      ).length,
+    };
+  }, [opportunities]);
+
+  const getRecommendationBadge = (rec: RecommendationType) => {
     switch (rec) {
       case "BUY":
+        return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.2)]";
       case "BUY MORE":
-        return {
-          dot: "🟢",
-          badgeClass: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-emerald-950/40",
-          borderHover: "hover:border-emerald-500/50",
-          titleColor: "text-emerald-400",
-        };
+        return "bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shadow-[0_0_12px_rgba(6,182,212,0.2)]";
       case "HOLD":
-        return {
-          dot: "🔵",
-          badgeClass: "bg-sky-500/20 text-sky-400 border-sky-500/40",
-          borderHover: "hover:border-sky-500/50",
-          titleColor: "text-sky-400",
-        };
+        return "bg-blue-500/15 text-blue-400 border-blue-500/30";
       case "WATCH":
-        return {
-          dot: "🟡",
-          badgeClass: "bg-amber-500/20 text-amber-400 border-amber-500/40",
-          borderHover: "hover:border-amber-500/50",
-          titleColor: "text-amber-400",
-        };
+        return "bg-amber-500/15 text-amber-400 border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.2)]";
       case "REDUCE":
-        return {
-          dot: "🟠",
-          badgeClass: "bg-orange-500/20 text-orange-400 border-orange-500/40",
-          borderHover: "hover:border-orange-500/50",
-          titleColor: "text-orange-400",
-        };
+        return "bg-orange-500/15 text-orange-400 border-orange-500/30";
       case "SELL":
-        return {
-          dot: "🔴",
-          badgeClass: "bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-rose-950/40",
-          borderHover: "hover:border-rose-500/50",
-          titleColor: "text-rose-400",
-        };
+        return "bg-rose-500/15 text-rose-400 border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.2)]";
       case "AVOID":
-        return {
-          dot: "⚫",
-          badgeClass: "bg-slate-700/50 text-slate-400 border-slate-600/40",
-          borderHover: "hover:border-slate-600/50",
-          titleColor: "text-slate-400",
-        };
+        return "bg-purple-500/15 text-purple-400 border-purple-500/30";
       default:
-        return {
-          dot: "⚪",
-          badgeClass: "bg-slate-800 text-slate-300 border-slate-700",
-          borderHover: "hover:border-slate-600",
-          titleColor: "text-slate-300",
-        };
+        return "bg-zinc-800 text-zinc-300 border-zinc-700";
     }
   };
 
-  const getValuationLabel = (valScore: number, pe: number | null) => {
-    if (pe && pe > 85) return "Extremely Overvalued";
-    if (valScore >= 75) return "Attractive / Undervalued";
-    if (valScore >= 50) return "Fair";
-    if (valScore >= 35) return "Expensive";
-    return "Extremely Overvalued";
-  };
-
-  const formatWhyPoints = (opp: InvestmentOpportunity) => {
-    const points: string[] = [];
-
-    // Revenue growth
-    if (opp.metrics.revenue_cagr_3y !== null && opp.metrics.revenue_cagr_3y > 0) {
-      points.push(`Revenue 3Y CAGR: ${opp.metrics.revenue_cagr_3y}%`);
-    } else if (opp.scores.fundamental_score >= 60) {
-      points.push("Solid top-line fundamental durability");
+  const getValuationTierBadge = (tier?: string) => {
+    switch (tier) {
+      case "UNDERVALUED":
+        return { label: "Undervalued", color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
+      case "FAIRLY_VALUED":
+        return { label: "Fairly Valued", color: "bg-blue-500/15 text-blue-300 border-blue-500/30" };
+      case "EXPENSIVE":
+        return { label: "Expensive", color: "bg-amber-500/15 text-amber-300 border-amber-500/30" };
+      case "EXTREMELY_OVERVALUED":
+        return { label: "Severely Stretched", color: "bg-rose-500/15 text-rose-300 border-rose-500/30" };
+      default:
+        return { label: "Valuation Assessed", color: "bg-zinc-800 text-zinc-400 border-zinc-700" };
     }
-
-    // Profitability / ROCE
-    if (opp.metrics.roce !== null) {
-      points.push(`ROCE: ${opp.metrics.roce}%`);
-    } else if (opp.metrics.operating_margin !== null) {
-      points.push(`Operating Margin: ${opp.metrics.operating_margin}%`);
-    }
-
-    // Cash conversion
-    if (opp.metrics.cfo_to_pat_ratio !== null) {
-      if (opp.metrics.cfo_to_pat_ratio >= 0.8) {
-        points.push(`Strong cash conversion (CFO/PAT: ${opp.metrics.cfo_to_pat_ratio}x)`);
-      } else {
-        points.push(`CFO to PAT conversion: ${opp.metrics.cfo_to_pat_ratio}x`);
-      }
-    } else {
-      points.push("Positive operating cash flow health");
-    }
-
-    // Debt status
-    if (opp.metrics.debt_to_equity !== null) {
-      if (opp.metrics.debt_to_equity <= 0.3) {
-        points.push(`Prudent leverage (Debt/Equity: ${opp.metrics.debt_to_equity}x)`);
-      } else {
-        points.push(`Debt to Equity: ${opp.metrics.debt_to_equity}x`);
-      }
-    }
-
-    // Valuation
-    const valLabel = getValuationLabel(opp.scores.valuation_score, opp.metrics.pe_ratio);
-    points.push(`Valuation: ${valLabel}`);
-
-    // Price reaction
-    const p5d = opp.metrics.price_change_5d;
-    if (p5d !== null) {
-      if (p5d >= 15) {
-        points.push(`Price surged (+${p5d}%) in 5 sessions`);
-      } else if (p5d <= 3 && p5d >= -3) {
-        points.push(`Subdued price reaction (${p5d > 0 ? "+" : ""}${p5d}%), attractive entry`);
-      } else {
-        points.push(`5-day price change: ${p5d > 0 ? "+" : ""}${p5d}%`);
-      }
-    }
-
-    return points.slice(0, 5);
   };
 
   return (
-    <div className="space-y-6">
-      {/* 1. Header Banner */}
-      <div className="p-6 bg-gradient-to-r from-slate-900 via-[#0d1522] to-slate-900 border border-slate-800 rounded-2xl shadow-xl backdrop-blur flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-              <Sparkles className="w-5 h-5" />
+    <section className="mt-12 mb-16 relative">
+      {/* Background ambient lighting */}
+      <div className="absolute -top-12 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="absolute -bottom-12 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none -z-10" />
+
+      {/* Header Container */}
+      <div className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/60 to-zinc-950/90 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 pb-6 border-b border-zinc-800/80">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+              <Compass className="w-3.5 h-3.5 text-indigo-400 animate-spin-slow" />
+              <span>Multi-Factor Institutional Intelligence</span>
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              AI Suggestions
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 flex items-center gap-3">
+              AI Market Suggestions & Ideas
+              <span className="text-xs font-normal text-zinc-400 px-2.5 py-0.5 rounded-full bg-zinc-800 border border-zinc-700">
+                {opportunities.length} Total Opportunities Found
+              </span>
             </h2>
+            <p className="text-sm text-zinc-400 max-w-3xl leading-relaxed">
+              Synthesized by BullCompass across 33 NSE sectors: real-world catalyst clustering, multi-year audited financial health, cash flow earnings quality, valuation multiples, and strict risk gates.
+            </p>
           </div>
-          <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-            Event-driven investment recommendations generated from macro news, causal transmission, audited fundamentals, valuation, and hard risk gates across the NSE universe.
-          </p>
-          {lastScannedAt && (
-            <div className="text-[11px] text-slate-500 font-medium pt-1">
-              Analysis generated: {new Date(lastScannedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
-            </div>
-          )}
+
+          {/* Action Bar */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              id="btn-scan-opportunities"
+              onClick={handleRunScan}
+              disabled={scanning || loading}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white text-sm font-medium transition-all duration-200 shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${scanning ? "animate-spin" : ""}`} />
+              <span>{scanning ? "Scanning 33 Sectors..." : "Scan & Discover Ideas"}</span>
+            </button>
+          </div>
         </div>
 
-        {/* Scan Action */}
-        <div className="flex items-center gap-3">
+        {/* Category Tabs */}
+        <div className="mt-6 flex flex-wrap items-center gap-2">
           <button
-            onClick={handleTriggerScan}
-            disabled={scanning}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-950/60 transition-all cursor-pointer"
+            onClick={() => setActiveCategoryTab("ALL")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 flex items-center gap-2 ${
+              activeCategoryTab === "ALL"
+                ? "bg-zinc-100 text-zinc-950 font-semibold shadow-md"
+                : "bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50"
+            }`}
           >
-            <RefreshCw className={`w-4 h-4 ${scanning ? "animate-spin" : ""}`} />
-            <span>{scanning ? "Analyzing Market & News..." : "Scan for New Opportunities"}</span>
+            <Layers className="w-3.5 h-3.5" />
+            <span>ALL OPPORTUNITIES</span>
+            <span className="px-1.5 py-0.2 rounded-md bg-zinc-700/50 text-[10px]">
+              {categoryCounts.ALL}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveCategoryTab("TOP")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 flex items-center gap-2 ${
+              activeCategoryTab === "TOP"
+                ? "bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 font-bold shadow-md shadow-amber-500/20"
+                : "bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50"
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-400" />
+            <span>TOP HIGH CONVICTION</span>
+            <span className="px-1.5 py-0.2 rounded-md bg-zinc-700/50 text-[10px]">
+              {categoryCounts.TOP}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveCategoryTab("DISCOVERIES")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 flex items-center gap-2 ${
+              activeCategoryTab === "DISCOVERIES"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-zinc-950 font-bold shadow-md shadow-emerald-500/20"
+                : "bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span>NEW DISCOVERIES (MARKET-WIDE)</span>
+            <span className="px-1.5 py-0.2 rounded-md bg-zinc-700/50 text-[10px]">
+              {categoryCounts.DISCOVERIES}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveCategoryTab("PORTFOLIO")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 flex items-center gap-2 ${
+              activeCategoryTab === "PORTFOLIO"
+                ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-zinc-950 font-bold shadow-md shadow-blue-500/20"
+                : "bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-cyan-400" />
+            <span>PORTFOLIO ACTIONS</span>
+            <span className="px-1.5 py-0.2 rounded-md bg-zinc-700/50 text-[10px]">
+              {categoryCounts.PORTFOLIO}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveCategoryTab("RISKS")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 flex items-center gap-2 ${
+              activeCategoryTab === "RISKS"
+                ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold shadow-md shadow-rose-500/20"
+                : "bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50"
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5 text-rose-400" />
+            <span>MARKET RISKS / AVOID</span>
+            <span className="px-1.5 py-0.2 rounded-md bg-zinc-700/50 text-[10px]">
+              {categoryCounts.RISKS}
+            </span>
           </button>
         </div>
-      </div>
 
-      {/* 2. Causal Reasoning Transmission Breadcrumb Banner */}
-      <div className="hidden lg:flex items-center justify-between px-5 py-3 bg-slate-900/60 border border-slate-800/80 rounded-xl text-[11px] font-semibold text-slate-400">
-        <div className="flex items-center gap-2 text-white">
-          <span className="text-emerald-400 font-bold">1</span> News / Event
-        </div>
-        <span className="text-slate-600">→</span>
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-400 font-bold">2</span> What Happened?
-        </div>
-        <span className="text-slate-600">→</span>
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-400 font-bold">3</span> Who is Affected?
-        </div>
-        <span className="text-slate-600">→</span>
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-400 font-bold">4</span> Beneficiaries & Losers
-        </div>
-        <span className="text-slate-600">→</span>
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-400 font-bold">5</span> Fundamentals & Multiples
-        </div>
-        <span className="text-slate-600">→</span>
-        <div className="flex items-center gap-2 text-emerald-400 font-bold">
-          <span>6</span> BullCompass Suggestion
-        </div>
-      </div>
-
-      {/* 3. Search & Filter Bar */}
-      <div className="p-4 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3">
-        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-          {/* Search Box */}
-          <div className="relative w-full md:w-80">
+        {/* Secondary Filter Controls */}
+        <div className="mt-4 pt-4 border-t border-zinc-800/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Search box */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
+              placeholder="Search ticker, company, theme..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search ticker, company, theme..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-800/80 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500/80 transition-colors"
+              className="w-full pl-9 pr-3 py-2 bg-zinc-950/70 border border-zinc-800 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500/60 transition-colors"
             />
-            <svg
-              className="w-4 h-4 text-slate-400 absolute left-3 top-2.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
           </div>
 
-          {/* Sector Selector */}
-          <div className="w-full md:w-auto flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Sector:</span>
+          {/* Recommendation dropdown */}
+          <div className="relative">
+            <select
+              value={selectedRec}
+              onChange={(e) => setSelectedRec(e.target.value as any)}
+              className="w-full px-3 py-2 bg-zinc-950/70 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500/60 transition-colors appearance-none cursor-pointer"
+            >
+              {REC_OPTIONS.map((rec) => (
+                <option key={rec} value={rec} className="bg-zinc-900 text-zinc-200">
+                  {rec === "ALL" ? "All Recommendations" : `Recommendation: ${rec}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sector dropdown */}
+          <div className="relative">
             <select
               value={selectedSector}
               onChange={(e) => setSelectedSector(e.target.value)}
-              className="w-full md:w-64 px-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500/80 cursor-pointer"
+              className="w-full px-3 py-2 bg-zinc-950/70 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500/60 transition-colors appearance-none cursor-pointer"
             >
               {SECTOR_OPTIONS.map((sec) => (
-                <option key={sec} value={sec}>
-                  {sec}
+                <option key={sec} value={sec} className="bg-zinc-900 text-zinc-200">
+                  {sec === "ALL" ? "All 33 NSE Sectors" : sec}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Time Horizon dropdown */}
+          <div className="relative">
+            <select
+              value={selectedHorizon}
+              onChange={(e) => setSelectedHorizon(e.target.value)}
+              className="w-full px-3 py-2 bg-zinc-950/70 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500/60 transition-colors appearance-none cursor-pointer"
+            >
+              {TIME_HORIZON_OPTIONS.map((hz) => (
+                <option key={hz} value={hz} className="bg-zinc-900 text-zinc-200">
+                  {hz === "ALL" ? "All Horizons" : `Horizon: ${hz}`}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Recommendation Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-800/80">
-          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mr-1">
-            Recommendation:
-          </span>
-          {REC_OPTIONS.map((rec) => {
-            const badgeMeta = rec !== "ALL" ? getRecBadge(rec) : null;
-            return (
-              <button
-                key={rec}
-                onClick={() => setSelectedRec(rec)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  selectedRec === rec
-                    ? "bg-slate-700 text-white border border-slate-600 shadow"
-                    : "bg-slate-800/40 text-slate-400 hover:text-slate-200 border border-transparent"
-                }`}
-              >
-                {badgeMeta && <span>{badgeMeta.dot}</span>}
-                <span>{rec}</span>
-              </button>
-            );
-          })}
-        </div>
+        {error && (
+          <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
       </div>
 
-      {/* 4. Suggestion Cards Grid & States */}
-      {loading ? (
-        <div className="py-20 text-center space-y-3 bg-slate-900/40 border border-slate-800/80 rounded-2xl">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500"></div>
-          <div className="text-sm font-semibold text-slate-300">Analyzing market opportunities...</div>
-          <div className="text-xs text-slate-500">Evaluating multi-factor fundamentals and hard risk gates</div>
-        </div>
-      ) : error ? (
-        <div className="p-6 bg-rose-950/20 border border-rose-500/40 rounded-2xl text-center space-y-2">
-          <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto" />
-          <div className="text-sm font-bold text-rose-300">Unable to load AI suggestions.</div>
-          <div className="text-xs text-rose-400/80">{error}</div>
-          <button
-            onClick={fetchOpportunities}
-            className="mt-2 px-4 py-1.5 bg-rose-900/40 hover:bg-rose-900/60 border border-rose-700 text-rose-200 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-          >
-            Retry
-          </button>
-        </div>
-      ) : filteredOpportunities.length === 0 ? (
-        <div className="py-16 text-center p-8 bg-slate-900/40 border border-slate-800/80 rounded-2xl space-y-3">
-          <ShieldAlert className="w-10 h-10 text-slate-600 mx-auto" />
-          <div className="text-base font-bold text-slate-300">No high-conviction opportunities detected.</div>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Try adjusting your filter or click &quot;Scan for New Opportunities&quot; to parse fresh macro news and discover candidate equities.
-          </p>
-          <button
-            onClick={handleTriggerScan}
-            className="mt-2 px-4 py-2 bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow transition-colors cursor-pointer"
-          >
-            Scan for New Opportunities
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredOpportunities.map((opp) => {
-            const badgeMeta = getRecBadge(opp.recommendation);
-            const whyPoints = formatWhyPoints(opp);
-            const p5d = opp.metrics.price_change_5d;
-
-            return (
+      {/* Opportunities Grid / List */}
+      <div className="mt-6">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
-                key={opp.id}
-                onClick={() => setSelectedOpportunity(opp)}
-                className={`p-5 bg-slate-900/80 hover:bg-slate-900 border border-slate-800 ${badgeMeta.borderHover} rounded-2xl shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-4 group`}
+                key={i}
+                className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 animate-pulse space-y-4"
               >
-                {/* Top Badge & Header */}
-                <div className="space-y-3">
-                  {/* Opportunity Status Pill */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      {opp.is_owned ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-                          <span>⚡</span>
-                          <span>PORTFOLIO ({(opp.portfolio_allocation_pct || 0).toFixed(1)}%)</span>
+                <div className="h-6 bg-zinc-800 rounded-lg w-2/3" />
+                <div className="h-4 bg-zinc-800 rounded w-1/2" />
+                <div className="h-20 bg-zinc-800/50 rounded-xl" />
+                <div className="h-10 bg-zinc-800 rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : filteredOpportunities.length === 0 ? (
+          <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-2xl p-12 text-center space-y-4">
+            <Compass className="w-12 h-12 text-zinc-600 mx-auto" />
+            <h3 className="text-base font-semibold text-zinc-300">
+              No matching suggestions found for the selected filters.
+            </h3>
+            <p className="text-xs text-zinc-500 max-w-md mx-auto">
+              Try broadening your sector or recommendation filters, or click "Scan & Discover Ideas" to scan fresh market intelligence.
+            </p>
+            <button
+              onClick={() => {
+                setActiveCategoryTab("ALL");
+                setSelectedRec("ALL");
+                setSelectedSector("ALL");
+                setSelectedHorizon("ALL");
+                setSearchQuery("");
+              }}
+              className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 transition-colors"
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredOpportunities.map((opp) => {
+              const valTier = getValuationTierBadge(opp.valuation_tier || opp.metrics?.valuation_tier);
+              const p1d = opp.metrics?.price_change_1d ?? null;
+              const p5d = opp.metrics?.price_change_5d ?? null;
+              const p20d = opp.metrics?.price_change_20d ?? null;
+              const dist52w = opp.metrics?.distance_from_52w_high_pct ?? null;
+
+              return (
+                <div
+                  key={opp.id || opp.ticker}
+                  className="group bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 hover:from-zinc-900 hover:to-zinc-900/95 border border-zinc-800/80 hover:border-zinc-700/80 rounded-2xl p-5 sm:p-6 transition-all duration-200 shadow-lg hover:shadow-2xl flex flex-col justify-between"
+                >
+                  {/* Top Metadata Row */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {opp.is_owned ? (
+                          <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[10px] font-semibold flex items-center gap-1">
+                            <Zap className="w-2.5 h-2.5" />
+                            PORTFOLIO {opp.portfolio_allocation_pct ? `(${opp.portfolio_allocation_pct}%)` : ""}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] font-semibold flex items-center gap-1">
+                            <Sparkles className="w-2.5 h-2.5" />
+                            NEW DISCOVERY
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px] truncate max-w-[130px]">
+                          {opp.sector}
                         </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                          <span>🔥</span>
-                          <span>NEW OPPORTUNITY</span>
+                      </div>
+
+                      {/* Catalyst Durability Pill */}
+                      {opp.catalyst_durability && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                            opp.catalyst_durability === "STRUCTURAL"
+                              ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-300"
+                              : "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                          }`}
+                        >
+                          {opp.catalyst_durability}
                         </span>
                       )}
-                      <span className="text-[10px] font-semibold text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/50 truncate max-w-[120px]">
-                        {opp.sector}
-                      </span>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-xs font-black text-white">
-                        {opp.conviction_score}%
-                      </span>
-                      <span className="text-[9px] uppercase font-bold text-slate-500 ml-1">
-                        Confidence
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Stock Header & Recommendation */}
-                  <div className="flex items-start justify-between gap-2 pt-1">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl font-black text-white group-hover:text-emerald-400 transition-colors">
-                          {opp.ticker}
-                        </span>
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider border flex items-center gap-1 ${badgeMeta.badgeClass}`}
-                        >
-                          <span>{badgeMeta.dot}</span>
-                          <span>{opp.recommendation}</span>
-                        </span>
-                      </div>
-                      <div className="text-xs font-semibold text-slate-300 truncate max-w-[220px] mt-0.5">
-                        {opp.company_name}
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <div className="text-xs font-bold text-slate-400">
-                        Horizon
-                      </div>
-                      <div className="text-xs font-bold text-white">
-                        {opp.time_horizon}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Trigger / What Happened */}
-                  <div className="p-3 bg-slate-800/50 border border-slate-700/60 rounded-xl space-y-1 text-xs">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Event Trigger
-                    </div>
-                    <div className="text-slate-200 font-medium line-clamp-2 leading-relaxed">
-                      &ldquo;{opp.event_summary || opp.news_title}&rdquo;
-                    </div>
-                  </div>
-
-                  {/* WHY BullCompass suggests this stock */}
-                  <div className="space-y-1.5 pt-1">
-                    <div className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">
-                      Why BullCompass Suggests This:
-                    </div>
-                    <div className="space-y-1 text-xs text-slate-300">
-                      {whyPoints.map((pt, idx) => (
-                        <div key={idx} className="flex items-start gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                          <span className="leading-tight">{pt}</span>
+                    {/* Stock & Recommendation Header */}
+                    <div className="flex items-start justify-between gap-3 pt-1">
+                      <div>
+                        <div className="flex items-baseline gap-2">
+                          <h3 className="text-xl font-bold text-zinc-100 group-hover:text-indigo-300 transition-colors">
+                            {opp.ticker}
+                          </h3>
+                          <span className="text-xs font-semibold text-zinc-400">
+                            ₹{opp.current_price?.toLocaleString("en-IN") || "N/A"}
+                          </span>
                         </div>
-                      ))}
+                        <p className="text-xs text-zinc-400 truncate max-w-[200px]">
+                          {opp.company_name}
+                        </p>
+                      </div>
+
+                      {/* Recommendation Badge */}
+                      <span
+                        className={`px-3 py-1 rounded-xl text-xs font-bold border tracking-wide uppercase shrink-0 ${getRecommendationBadge(
+                          opp.recommendation
+                        )}`}
+                      >
+                        {opp.recommendation}
+                      </span>
                     </div>
+
+                    {/* Conviction Score & Valuation Tier Bar */}
+                    <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-800/60">
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-zinc-500 font-medium uppercase">
+                            Conviction
+                          </span>
+                          <span className="text-xs font-bold text-zinc-200">
+                            {opp.conviction_score}/100
+                          </span>
+                        </div>
+                        <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              opp.conviction_score >= 75
+                                ? "bg-emerald-400"
+                                : opp.conviction_score >= 60
+                                ? "bg-indigo-400"
+                                : "bg-amber-400"
+                            }`}
+                            style={{ width: `${opp.conviction_score}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-medium border ${valTier.color}`}
+                      >
+                        {valTier.label}
+                      </span>
+                    </div>
+
+                    {/* Triggering Event Box */}
+                    <div className="space-y-1.5 p-3 rounded-xl bg-zinc-950/40 border border-zinc-800/40 text-xs">
+                      <div className="flex items-center justify-between text-zinc-500 text-[10px]">
+                        <span className="font-semibold uppercase tracking-wider flex items-center gap-1 text-zinc-400">
+                          <Compass className="w-3 h-3 text-indigo-400" />
+                          Market Catalyst
+                        </span>
+                        <span>{opp.time_horizon}</span>
+                      </div>
+                      <p className="text-zinc-300 line-clamp-2 leading-relaxed">
+                        {opp.event_summary}
+                      </p>
+                    </div>
+
+                    {/* "Why BullCompass Suggests This" Deterministic Bullets */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-semibold uppercase text-zinc-500 tracking-wider">
+                        Why BullCompass Suggests This
+                      </span>
+                      <ul className="space-y-1 text-xs text-zinc-400">
+                        {/* 1. Fundamentals bullet */}
+                        <li className="flex items-start gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                          <span className="line-clamp-1">
+                            {opp.metrics?.revenue_cagr_3y != null
+                              ? `3Y Revenue CAGR: ${opp.metrics.revenue_cagr_3y}% | ROCE: ${opp.metrics.roce || "N/A"}%`
+                              : "Solid balance sheet & operating margins"}
+                          </span>
+                        </li>
+
+                        {/* 2. Earnings quality bullet */}
+                        <li className="flex items-start gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                          <span className="line-clamp-1">
+                            {opp.metrics?.cfo_to_pat_ratio != null
+                              ? `CFO/PAT: ${opp.metrics.cfo_to_pat_ratio}x (Cash conversion)`
+                              : "Audited multi-year earnings support"}
+                          </span>
+                        </li>
+
+                        {/* 3. Valuation multiple */}
+                        <li className="flex items-start gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                          <span className="line-clamp-1">
+                            P/E: {opp.metrics?.pe_ratio ? `${opp.metrics.pe_ratio}x` : "N/A"} | P/B: {opp.metrics?.pb_ratio ? `${opp.metrics.pb_ratio}x` : "N/A"}
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Price Momentum Grid (1D, 5D, 20D, 52W High) */}
+                    <div className="grid grid-cols-4 gap-1.5 pt-1 text-center">
+                      <div className="p-1.5 rounded-lg bg-zinc-950/60 border border-zinc-800/40">
+                        <span className="text-[9px] text-zinc-500 block uppercase">1D</span>
+                        <span
+                          className={`text-xs font-semibold ${
+                            (p1d || 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                          }`}
+                        >
+                          {p1d != null ? `${p1d > 0 ? "+" : ""}${p1d}%` : "—"}
+                        </span>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-zinc-950/60 border border-zinc-800/40">
+                        <span className="text-[9px] text-zinc-500 block uppercase">5D</span>
+                        <span
+                          className={`text-xs font-semibold ${
+                            (p5d || 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                          }`}
+                        >
+                          {p5d != null ? `${p5d > 0 ? "+" : ""}${p5d}%` : "—"}
+                        </span>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-zinc-950/60 border border-zinc-800/40">
+                        <span className="text-[9px] text-zinc-500 block uppercase">20D</span>
+                        <span
+                          className={`text-xs font-semibold ${
+                            (p20d || 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                          }`}
+                        >
+                          {p20d != null ? `${p20d > 0 ? "+" : ""}${p20d}%` : "—"}
+                        </span>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-zinc-950/60 border border-zinc-800/40">
+                        <span className="text-[9px] text-zinc-500 block uppercase">vs 52W H</span>
+                        <span className="text-xs font-semibold text-zinc-300">
+                          {dist52w != null ? `${dist52w}%` : "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Hard Risk Gate Notice */}
+                    {opp.hard_gates_triggered && opp.hard_gates_triggered.length > 0 ? (
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] flex items-start gap-2">
+                        <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
+                        <div className="space-y-0.5">
+                          <span className="font-semibold block">
+                            {opp.hard_gates_triggered[0].gate_name}
+                          </span>
+                          <p className="text-amber-300/80 text-[10px] line-clamp-1">
+                            {opp.hard_gates_triggered[0].impact_on_decision}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded-xl bg-emerald-500/5 border border-emerald-500/15 text-emerald-400/90 text-[10px] flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                        <span>All Hard Risk Gates Cleared</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* 5D Price Reaction & Valuation pill */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80">
-                    <div className="p-2 bg-slate-800/40 rounded-lg text-xs">
-                      <div className="text-[10px] text-slate-400 uppercase font-bold">5D Price Reaction</div>
-                      <div className={`font-bold mt-0.5 ${p5d !== null && p5d > 0 ? "text-emerald-400" : p5d !== null && p5d < 0 ? "text-rose-400" : "text-slate-300"}`}>
-                        {p5d !== null ? `${p5d > 0 ? "+" : ""}${p5d}%` : "N/A"}
-                      </div>
-                    </div>
-
-                    <div className="p-2 bg-slate-800/40 rounded-lg text-xs">
-                      <div className="text-[10px] text-slate-400 uppercase font-bold">Quality Score</div>
-                      <div className="font-bold text-white mt-0.5">
-                        {opp.scores.fundamental_score}/100
-                      </div>
-                    </div>
+                  {/* Modal Trigger Action */}
+                  <div className="mt-5 pt-3 border-t border-zinc-800/60">
+                    <button
+                      onClick={() => setSelectedOpportunity(opp)}
+                      className="w-full py-2 px-3 rounded-xl bg-zinc-800/60 hover:bg-zinc-700/60 text-xs font-medium text-zinc-200 hover:text-white transition-all flex items-center justify-center gap-2 group-hover:border-indigo-500/40 border border-transparent cursor-pointer"
+                    >
+                      <span>Institutional Research Memo</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform text-indigo-400" />
+                    </button>
                   </div>
-
-                  {/* Key Risks Snippet */}
-                  {opp.key_risks.length > 0 && (
-                    <div className="space-y-1 pt-1">
-                      <div className="text-[10px] font-bold text-rose-400/90 uppercase tracking-wider flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3 text-rose-400" />
-                        <span>Key Risks:</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 line-clamp-1">
-                        {opp.key_risks[0]}
-                      </div>
-                    </div>
-                  )}
                 </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-                {/* Action CTA */}
-                <div className="pt-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedOpportunity(opp);
-                    }}
-                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white rounded-xl border border-slate-700/80 transition-all flex items-center justify-center gap-2 group-hover:border-slate-600 shadow-md cursor-pointer"
-                  >
-                    <span>View Full Analysis</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Modal View for Full Institutional Research Memo */}
+      {selectedOpportunity && (
+        <OpportunityDetailModal
+          opportunity={selectedOpportunity}
+          onClose={() => setSelectedOpportunity(null)}
+        />
       )}
-
-      {/* Full Modal */}
-      <OpportunityDetailModal
-        opportunity={selectedOpportunity}
-        onClose={() => setSelectedOpportunity(null)}
-      />
-    </div>
+    </section>
   );
 };

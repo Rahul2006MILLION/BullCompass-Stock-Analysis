@@ -27,7 +27,8 @@ export default function DashboardPage() {
   const { error, success } = useToast();
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [history, setHistory] = useState<PortfolioHistorySnapshot[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isPortfolioLoading, setIsPortfolioLoading] = useState(true);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
 
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -40,33 +41,63 @@ export default function DashboardPage() {
     return portfolio?.holdings?.map((h) => h.ticker) || [];
   }, [portfolio?.holdings]);
 
-  const fetchData = useCallback(async () => {
+  // Fetch portfolio summary and holdings valuation (live price dependent)
+  const fetchPortfolioValuation = useCallback(async (isSilent = false) => {
     try {
-      setIsLoading(true);
-      const [portfolioData, historyData] = await Promise.all([
-        api.getPortfolio(),
-        api.getPortfolioHistory(),
-      ]);
+      if (!isSilent) {
+        setIsPortfolioLoading(true);
+      }
+      const portfolioData = await api.getPortfolio();
       console.log("[DASHBOARD] Received canonical portfolio:", {
         total_current_value: portfolioData.total_current_value,
         total_invested: portfolioData.total_invested,
         total_unrealized_profit: portfolioData.total_unrealized_profit,
       });
       setPortfolio(portfolioData);
-      setHistory(historyData);
     } catch (err: any) {
-      error("Connection Error", err?.message || "Could not connect to BullCompass backend API.");
+      if (!isSilent) {
+        error("Connection Error", err?.message || "Could not connect to BullCompass backend API.");
+      }
     } finally {
-      setIsLoading(false);
+      if (!isSilent) {
+        setIsPortfolioLoading(false);
+      }
     }
   }, [error]);
 
-  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>, status?: MarketStatus | null) => {
-    // Only re-fetch backend canonical valuation when market is actively OPEN
-    if (status?.is_open) {
-      fetchData();
+  // Fetch historical snapshot data (only when snapshot recorded / timeframe changed / full sync)
+  const fetchHistoricalData = useCallback(async (isSilent = false) => {
+    try {
+      if (!isSilent) {
+        setIsHistoryLoading(true);
+      }
+      const historyData = await api.getPortfolioHistory();
+      setHistory(historyData);
+    } catch (err: any) {
+      if (!isSilent) {
+        error("Connection Error", err?.message || "Could not load portfolio history.");
+      }
+    } finally {
+      if (!isSilent) {
+        setIsHistoryLoading(false);
+      }
     }
-  }, [fetchData]);
+  }, [error]);
+
+  const fetchAllData = useCallback(async (isSilent = false) => {
+    await Promise.all([
+      fetchPortfolioValuation(isSilent),
+      fetchHistoricalData(isSilent),
+    ]);
+  }, [fetchPortfolioValuation, fetchHistoricalData]);
+
+  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>, status?: MarketStatus | null) => {
+    // Only re-fetch backend canonical valuation when market is actively OPEN.
+    // Silent fetch of portfolio valuation only — NEVER refetch or reload historical chart.
+    if (status?.is_open) {
+      fetchPortfolioValuation(true);
+    }
+  }, [fetchPortfolioValuation]);
 
   const { isPolling, syncNow, lastSyncTime } = useLiveQuotes({
     tickers: holdingTickers,
@@ -75,17 +106,18 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    fetchData();
+    fetchAllData(false);
 
     const handlePortfolioUpdate = () => {
-      fetchData();
+      // Triggered when a new snapshot is recorded or portfolio changes externally
+      fetchAllData(true);
     };
 
     window.addEventListener("portfolio-updated", handlePortfolioUpdate);
     return () => {
       window.removeEventListener("portfolio-updated", handlePortfolioUpdate);
     };
-  }, [fetchData]);
+  }, [fetchAllData]);
 
   // Modal action handlers
   const handleOpenBuy = (holding?: HoldingItem) => {
@@ -110,7 +142,7 @@ export default function DashboardPage() {
     try {
       await api.deleteHolding(holding.id);
       success("Holding Deleted", `${holding.ticker} removed from portfolio.`);
-      fetchData();
+      fetchAllData(true);
     } catch (err: any) {
       error("Delete Failed", err?.message || "Failed to delete holding.");
     }
@@ -173,7 +205,7 @@ export default function DashboardPage() {
             returnPercentage={portfolio?.total_return_percentage || 0}
             realizedProfit={portfolio?.total_realized_profit || 0}
             totalHoldings={portfolio?.total_holdings || 0}
-            isLoading={isLoading}
+            isLoading={isPortfolioLoading}
           />
         </motion.div>
 
@@ -187,7 +219,7 @@ export default function DashboardPage() {
         >
           {/* Performance Area Chart (7 cols) */}
           <Card className="lg:col-span-7 p-6">
-            <NetWorthAreaChart data={history} isLoading={isLoading} />
+            <NetWorthAreaChart data={history} isLoading={isHistoryLoading} />
           </Card>
 
           {/* Allocation Donut (5 cols) */}
@@ -281,7 +313,7 @@ export default function DashboardPage() {
             onEdit={handleOpenEdit}
             onDelete={handleDeleteHolding}
             onAddNew={() => setIsAddModalOpen(true)}
-            isLoading={isLoading}
+            isLoading={isPortfolioLoading}
           />
         </motion.div>
       </div>
@@ -290,27 +322,27 @@ export default function DashboardPage() {
       <AddHoldingModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSuccess={fetchData}
+        onSuccess={() => fetchAllData(true)}
       />
 
       <BuyModal
         isOpen={isBuyModalOpen}
         onClose={() => setIsBuyModalOpen(false)}
-        onSuccess={fetchData}
+        onSuccess={() => fetchAllData(true)}
         initialHolding={selectedHolding}
       />
 
       <SellModal
         isOpen={isSellModalOpen}
         onClose={() => setIsSellModalOpen(false)}
-        onSuccess={fetchData}
+        onSuccess={() => fetchAllData(true)}
         holding={selectedHolding}
       />
 
       <EditHoldingModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        onSuccess={fetchData}
+        onSuccess={() => fetchAllData(true)}
         holding={selectedHolding}
       />
     </>

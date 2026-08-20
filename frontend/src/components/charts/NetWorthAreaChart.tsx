@@ -26,7 +26,10 @@ function parseSnapshotDate(ts: string): Date {
   return isNaN(fallback.getTime()) ? new Date() : fallback;
 }
 
-export function NetWorthAreaChart({ data, isLoading = false }: NetWorthAreaChartProps) {
+export const NetWorthAreaChart = React.memo(function NetWorthAreaChart({
+  data,
+  isLoading = false,
+}: NetWorthAreaChartProps) {
   const [timeRange, setTimeRange] = useState<"1W" | "1M" | "3M" | "ALL">("ALL");
 
   const filteredSnapshots = useMemo(() => {
@@ -246,5 +249,6 @@ export function NetWorthAreaChart({ data, isLoading = false }: NetWorthAreaChart
       </div>
     </div>
   );
-}
+});
+
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React from "react";
 import { cn } from "@/lib/utils";
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -13,7 +13,6 @@ export function Card({
   glow = "none",
   hoverable = false,
   children,
-  onMouseMove,
   ...props
 }: CardProps) {
   const glowStyles = {
@@ -23,24 +22,8 @@ export function Card({
     coral: "shadow-[0_0_30px_-5px_rgba(244,63,94,0.12)] border-rose-500/20",
   };
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      e.currentTarget.style.setProperty("--mouse-x", `${x}px`);
-      e.currentTarget.style.setProperty("--mouse-y", `${y}px`);
-
-      if (onMouseMove) {
-        onMouseMove(e);
-      }
-    },
-    [onMouseMove]
-  );
-
   return (
     <div
-      onMouseMove={handleMouseMove}
       className={cn(
         "fintech-card p-5 relative overflow-hidden",
         glowStyles[glow],

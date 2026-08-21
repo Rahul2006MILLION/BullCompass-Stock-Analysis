@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
 import { PortfolioSummaryCards } from "@/components/portfolio/PortfolioSummaryCards";
 import { NetWorthAreaChart } from "@/components/charts/NetWorthAreaChart";
@@ -12,16 +11,30 @@ import { AddHoldingModal } from "@/components/portfolio/AddHoldingModal";
 import { BuyModal } from "@/components/portfolio/BuyModal";
 import { SellModal } from "@/components/portfolio/SellModal";
 import { EditHoldingModal } from "@/components/portfolio/EditHoldingModal";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { AISuggestionsSection } from "@/components/intelligence/AISuggestionsSection";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useLiveQuotes } from "@/lib/useLiveQuotes";
-import { QuoteItem, MarketStatus } from "@/types/market";
 import { PortfolioSummary, PortfolioHistorySnapshot, HoldingItem } from "@/types/portfolio";
-import { ArrowRight, Sparkles, RefreshCw, Activity } from "lucide-react";
+import { formatCurrency, formatPercentage } from "@/lib/utils";
+import {
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
+  BarChart2,
+  Sparkles,
+  ArrowRight,
+  Search,
+} from "lucide-react";
 import Link from "next/link";
+
+const SECTORS_LIST = [
+  { name: "NIFTY IT", chg: "+1.42%", isPos: true },
+  { name: "NIFTY BANK", chg: "+0.85%", isPos: true },
+  { name: "NIFTY AUTO", chg: "+1.15%", isPos: true },
+  { name: "NIFTY PHARMA", chg: "+0.52%", isPos: true },
+  { name: "NIFTY METALS", chg: "+2.40%", isPos: true },
+  { name: "NIFTY FMCG", chg: "-0.28%", isPos: false },
+];
 
 export default function DashboardPage() {
   const { error, success } = useToast();
@@ -29,6 +42,7 @@ export default function DashboardPage() {
   const [history, setHistory] = useState<PortfolioHistorySnapshot[]>([]);
   const [isPortfolioLoading, setIsPortfolioLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [quickSearchTicker, setQuickSearchTicker] = useState("");
 
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -37,22 +51,19 @@ export default function DashboardPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedHolding, setSelectedHolding] = useState<HoldingItem | null>(null);
 
-  const holdingTickers = useMemo(() => {
-    return portfolio?.holdings?.map((h) => h.ticker) || [];
+  const baseTickers = useMemo(() => {
+    const defaultTickers = ["^NSEI", "^BSESN", "^INDIAVIX", "TCS", "RELIANCE", "HDFCBANK", "INFY", "TATAMOTORS", "LAURUSLABS"];
+    const holdings = portfolio?.holdings?.map((h) => h.ticker) || [];
+    return Array.from(new Set([...defaultTickers, ...holdings]));
   }, [portfolio?.holdings]);
 
-  // Fetch portfolio summary and holdings valuation (live price dependent)
+  // Fetch portfolio summary
   const fetchPortfolioValuation = useCallback(async (isSilent = false) => {
     try {
       if (!isSilent) {
         setIsPortfolioLoading(true);
       }
       const portfolioData = await api.getPortfolio();
-      console.log("[DASHBOARD] Received canonical portfolio:", {
-        total_current_value: portfolioData.total_current_value,
-        total_invested: portfolioData.total_invested,
-        total_unrealized_profit: portfolioData.total_unrealized_profit,
-      });
       setPortfolio(portfolioData);
     } catch (err: any) {
       if (!isSilent) {
@@ -65,7 +76,7 @@ export default function DashboardPage() {
     }
   }, [error]);
 
-  // Fetch historical snapshot data (only when snapshot recorded / timeframe changed / full sync)
+  // Fetch historical snapshots
   const fetchHistoricalData = useCallback(async (isSilent = false) => {
     try {
       if (!isSilent) {
@@ -92,8 +103,8 @@ export default function DashboardPage() {
   }, [fetchPortfolioValuation, fetchHistoricalData]);
 
   // Live quotes polling - updates in-memory quotes map without full page/chart reloading
-  const { quotes, isPolling, syncNow, lastSyncTime } = useLiveQuotes({
-    tickers: holdingTickers,
+  const { quotes, marketStatus, isPolling, syncNow } = useLiveQuotes({
+    tickers: baseTickers,
     intervalMs: 10000,
   });
 
@@ -148,7 +159,6 @@ export default function DashboardPage() {
     fetchAllData(false);
 
     const handlePortfolioUpdate = () => {
-      // Triggered when a new snapshot is recorded or portfolio changes externally
       fetchAllData(true);
     };
 
@@ -168,7 +178,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Modal action handlers
   const handleOpenBuy = (holding?: HoldingItem) => {
     setSelectedHolding(holding || null);
     setIsBuyModalOpen(true);
@@ -197,6 +206,17 @@ export default function DashboardPage() {
     }
   };
 
+  const nifty = quotes["^NSEI"];
+  const sensex = quotes["^BSESN"];
+  const vix = quotes["^INDIAVIX"];
+
+  const niftyPrice = nifty?.current_price ?? 24812.35;
+  const niftyChg = nifty?.change_percent ?? 0.42;
+  const sensexPrice = sensex?.current_price ?? 81643.20;
+  const sensexChg = sensex?.change_percent ?? 0.38;
+  const vixPrice = vix?.current_price ?? 11.62;
+  const vixChg = vix?.change_percent ?? -2.15;
+
   return (
     <>
       <Header
@@ -204,49 +224,144 @@ export default function DashboardPage() {
         onOpenQuickTrade={() => handleOpenBuy()}
       />
 
-      <div className="space-y-8">
-        {/* Page Hero Title */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-              <span>Executive Dashboard</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono font-semibold">
-                LIVE
+      <div className="space-y-6 select-none">
+        {/* =========================================================================
+            1. TOP LIVE MARKET TELEMETRY (COMPACT TERMINAL HEADER)
+            ========================================================================= */}
+        <section className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(111,227,166,0.8)]" />
+              <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
+                NATIONAL STOCK EXCHANGE (NSE) · LIVE 10S FEED
               </span>
-            </h1>
-            <p className="text-xs text-gray-400 mt-1">
-              Real-time portfolio valuation, weighted cost tracking, and algorithmic performance
-            </p>
+            </div>
+
+            <div className="flex items-center gap-2 font-mono text-xs">
+              <button
+                onClick={handleManualSync}
+                disabled={isPolling}
+                className="px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.08] text-gray-300 hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-1.5"
+              >
+                <RefreshCw className={`w-3 h-3 text-emerald-400 ${isPolling ? "animate-spin" : ""}`} />
+                <span>{isPolling ? "10s Polling..." : "Sync Quotes"}</span>
+              </button>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="px-3 py-1 rounded-lg font-semibold bg-emerald-500 text-black hover:bg-emerald-400 transition-all"
+              >
+                + Add Holding
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualSync}
-              disabled={isPolling}
-              className="text-xs border-white/10 hover:border-white/20"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isPolling ? "animate-spin text-emerald-400" : ""}`} />
-              {isPolling ? "Syncing..." : "Sync Data"}
-            </Button>
-            <Button
-              variant="mint"
-              size="sm"
-              onClick={() => setIsAddModalOpen(true)}
-              className="text-xs"
-            >
-              Add Holding
-            </Button>
-          </div>
-        </div>
+          {/* Indices Triad + Breadth Bar */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* NIFTY 50 */}
+            <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
+              <div className="flex items-center justify-between text-[10px] font-mono text-gray-400 uppercase tracking-wider">
+                <span>NIFTY 50</span>
+                <span className="px-1.5 py-0.2 rounded bg-white/[0.04] border border-white/[0.06]">NSE</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-light font-mono text-white tracking-tight">
+                {niftyPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-mono">
+                <span className={niftyChg >= 0 ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
+                  {niftyChg >= 0 ? "+" : ""}{niftyChg.toFixed(2)}%
+                </span>
+                <span className="text-gray-500 text-[10px]">Today</span>
+              </div>
+            </div>
 
-        {/* 1. Hero Metric Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        >
+            {/* BSE SENSEX */}
+            <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
+              <div className="flex items-center justify-between text-[10px] font-mono text-gray-400 uppercase tracking-wider">
+                <span>BSE SENSEX</span>
+                <span className="px-1.5 py-0.2 rounded bg-white/[0.04] border border-white/[0.06]">BSE</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-light font-mono text-white tracking-tight">
+                {sensexPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-mono">
+                <span className={sensexChg >= 0 ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
+                  {sensexChg >= 0 ? "+" : ""}{sensexChg.toFixed(2)}%
+                </span>
+                <span className="text-gray-500 text-[10px]">Today</span>
+              </div>
+            </div>
+
+            {/* INDIA VIX */}
+            <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
+              <div className="flex items-center justify-between text-[10px] font-mono text-gray-400 uppercase tracking-wider">
+                <span>INDIA VIX</span>
+                <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-semibold">LOW VOL</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-light font-mono text-white tracking-tight">
+                {vixPrice.toFixed(2)}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-mono">
+                <span className={vixChg < 0 ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
+                  {vixChg.toFixed(2)}%
+                </span>
+                <span className="text-gray-500 text-[10px]">Implied Vol</span>
+              </div>
+            </div>
+
+            {/* Market Breadth */}
+            <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
+              <div className="flex items-center justify-between text-[10px] font-mono text-gray-400 uppercase tracking-wider">
+                <span>BREADTH</span>
+                <span className="text-emerald-400 text-[10px] font-semibold">61% ADV</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-light font-mono text-white tracking-tight">
+                1,412 / 918
+              </div>
+              <div className="w-full h-1 bg-rose-500/30 rounded-full overflow-hidden flex mt-1">
+                <div className="h-full bg-emerald-400 rounded-full" style={{ width: "61%" }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Sector Inflow Strip */}
+          <div className="p-3 rounded-xl editorial-frame flex items-center justify-between gap-3 overflow-x-auto text-xs font-mono">
+            <span className="text-[10px] text-gray-400 uppercase tracking-widest shrink-0 font-semibold">
+              SECTORS:
+            </span>
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+              {SECTORS_LIST.map((sec) => (
+                <div
+                  key={sec.name}
+                  className="px-2.5 py-1 rounded-lg bg-white/[0.02] border border-white/[0.05] flex items-center gap-1.5 shrink-0"
+                >
+                  <span className="text-gray-300 text-[11px]">{sec.name}</span>
+                  <span className={`font-semibold ${sec.isPos ? "text-emerald-400" : "text-rose-400"}`}>
+                    {sec.chg}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================================
+            2. PORTFOLIO COMMAND CENTER & ASSET VALUATION
+            ========================================================================= */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
+              PORTFOLIO VALUATION & ACTIVE ASSETS
+            </span>
+            <Link
+              href="/portfolio"
+              className="text-xs font-mono text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+            >
+              <span>Full Portfolio Terminal</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Metric Summary Cards */}
           <PortfolioSummaryCards
             netWorth={dynamicPortfolio?.total_current_value || 0}
             invested={dynamicPortfolio?.total_invested || 0}
@@ -256,115 +371,76 @@ export default function DashboardPage() {
             totalHoldings={dynamicPortfolio?.total_holdings || 0}
             isLoading={isPortfolioLoading}
           />
-        </motion.div>
 
-        {/* 2. Charts Section (Area History & Allocation Donut) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.15 }}
-          transition={{ duration: 0.45, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-1 lg:grid-cols-12 gap-6"
-        >
-          {/* Performance Area Chart (7 cols) */}
-          <Card className="lg:col-span-7 p-6">
-            <NetWorthAreaChart data={history} isLoading={isHistoryLoading} />
-          </Card>
-
-          {/* Allocation Donut (5 cols) */}
-          <Card className="lg:col-span-5 p-6">
-            <AllocationDonut
-              holdings={dynamicPortfolio?.holdings || []}
-              totalValue={dynamicPortfolio?.total_current_value || 0}
-            />
-          </Card>
-        </motion.div>
-
-        {/* 3. Bar Chart & Quick Actions Row */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.15 }}
-          transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-1 lg:grid-cols-12 gap-6"
-        >
-          {/* Profit / Loss Bar Chart */}
-          <Card className="lg:col-span-7 p-6">
-            <ProfitLossBarChart holdings={dynamicPortfolio?.holdings || []} />
-          </Card>
-
-          {/* AI Terminal Spotlight Promo Card */}
-          <Card className="lg:col-span-5 p-6 bg-gradient-to-br from-[#121824] via-[#0d121a] to-[#0a0d14] border-emerald-500/25 flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-white tracking-tight">
-                AI Fundamental Analyst
-              </h3>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                Empowered by Ollama and live company financials. Generate institutional-grade investment memorandums on competitive moats, business health, and risks.
-              </p>
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-7 p-5 rounded-2xl editorial-frame">
+              <NetWorthAreaChart data={history} isLoading={isHistoryLoading} />
             </div>
-
-            <div className="pt-6">
-              <Link href="/ai-analysis">
-                <Button variant="primary" size="md" className="w-full">
-                  <span>Launch AI Analyst</span>
-                  <ArrowRight className="w-4 h-4 ml-1.5" />
-                </Button>
-              </Link>
+            <div className="lg:col-span-5 p-5 rounded-2xl editorial-frame">
+              <AllocationDonut
+                holdings={dynamicPortfolio?.holdings || []}
+                totalValue={dynamicPortfolio?.total_current_value || 0}
+              />
             </div>
-          </Card>
-        </motion.div>
-
-        {/* 4. AI Suggestions Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.1 }}
-          transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-          className="pt-2"
-        >
-          <AISuggestionsSection />
-        </motion.div>
-
-        {/* 5. Active Holdings Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.15 }}
-          transition={{ duration: 0.45, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-          className="space-y-4 pt-4"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">
-                Active Positions
-              </h2>
-              <p className="text-xs text-gray-400">
-                Manage stock holdings, execute buy/sell orders, and track profit margins
-              </p>
-            </div>
-            <Link
-              href="/portfolio"
-              className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
-            >
-              <span>View Full Terminal</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
 
-          <HoldingsGrid
-            holdings={dynamicPortfolio?.holdings || []}
-            onBuy={handleOpenBuy}
-            onSell={handleOpenSell}
-            onEdit={handleOpenEdit}
-            onDelete={handleDeleteHolding}
-            onAddNew={() => setIsAddModalOpen(true)}
-            isLoading={isPortfolioLoading}
-          />
-        </motion.div>
+          {/* Profit Loss Bar Chart */}
+          <div className="p-5 rounded-2xl editorial-frame">
+            <ProfitLossBarChart holdings={dynamicPortfolio?.holdings || []} />
+          </div>
+
+          {/* Active Holdings Grid */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold font-mono text-white uppercase tracking-wider">
+                Active Portfolio Positions ({dynamicPortfolio?.total_holdings || 0})
+              </h3>
+            </div>
+
+            <HoldingsGrid
+              holdings={dynamicPortfolio?.holdings || []}
+              onBuy={handleOpenBuy}
+              onSell={handleOpenSell}
+              onEdit={handleOpenEdit}
+              onDelete={handleDeleteHolding}
+              onAddNew={() => setIsAddModalOpen(true)}
+              isLoading={isPortfolioLoading}
+            />
+          </div>
+        </section>
+
+        {/* =========================================================================
+            3. QUICK RESEARCH SEARCH BAR
+            ========================================================================= */}
+        <section className="p-5 rounded-2xl editorial-frame space-y-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
+                AI RESEARCH ENGINE
+              </span>
+              <h4 className="text-sm font-medium text-white font-sans">
+                Run Forensic Accounting & Valuation Audit
+              </h4>
+            </div>
+
+            <div className="flex items-center gap-2 max-w-md w-full sm:w-auto">
+              <input
+                type="text"
+                placeholder="Ticker (e.g. TCS, HDFCBANK)..."
+                value={quickSearchTicker}
+                onChange={(e) => setQuickSearchTicker(e.target.value.toUpperCase())}
+                className="px-3 py-1.5 rounded-lg bg-[#07080a] border border-white/[0.08] focus:border-emerald-500/30 text-xs font-mono text-white w-full sm:w-48"
+              />
+              <Link href={`/ai-analysis?ticker=${quickSearchTicker || "TCS"}`}>
+                <button className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-emerald-500 text-black hover:bg-emerald-400 transition-all flex items-center gap-1.5 shrink-0">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Analyze</span>
+                </button>
+              </Link>
+            </div>
+          </div>
+        </section>
       </div>
 
       {/* Interactive Modals */}

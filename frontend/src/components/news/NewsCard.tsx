@@ -2,9 +2,6 @@
 
 import React from "react";
 import { NewsItem } from "@/types/news";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import {
   ExternalLink,
   Clock,
@@ -13,6 +10,8 @@ import {
   Tag,
   Building2,
   ChevronRight,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 
 interface NewsCardProps {
@@ -48,69 +47,61 @@ export function NewsCard({ article, onSelect }: NewsCardProps) {
   const isHighImportance = article.importance?.toUpperCase() === "HIGH";
 
   return (
-    <Card
-      className={`group transition-all duration-300 bg-[#0d121a]/95 hover:bg-[#111724] border-white/8 hover:border-white/20 relative flex flex-col justify-between cursor-pointer ${
-        isHighImportance ? "hover:border-amber-500/30" : "hover:border-emerald-500/30"
-      }`}
+    <div
       onClick={() => onSelect(article)}
+      className="editorial-frame editorial-frame-hover p-5 rounded-2xl flex flex-col justify-between cursor-pointer group space-y-4"
     >
-      {/* Top accent bar for high importance */}
-      {isHighImportance && (
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500 via-orange-400 to-amber-500" />
-      )}
-
       <div>
-        {/* Top Meta Bar */}
-        <div className="flex items-center justify-between gap-2 mb-2.5">
+        {/* Meta telemetry bar */}
+        <div className="flex items-center justify-between gap-2 mb-2 text-xs font-mono">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 text-gray-300 border border-white/8 flex items-center gap-1">
+            <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.04] text-gray-300 border border-white/[0.06] flex items-center gap-1">
               <Globe className="w-3 h-3 text-gray-400" />
               {article.source}
             </span>
 
-            <Badge variant="neutral" size="sm" className="text-[10px] py-0 px-2">
-              <Tag className="w-2.5 h-2.5 mr-1 text-emerald-400" />
+            <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.03] text-gray-400 border border-white/[0.05]">
               {article.category}
-            </Badge>
+            </span>
 
             {isHighImportance && (
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 font-semibold">
-                <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                Market Moving
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-1 font-semibold">
+                <Zap className="w-2.5 h-2.5 text-amber-400" />
+                MARKET IMPACT
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-1 text-[11px] text-gray-400 font-mono shrink-0">
+          <div className="flex items-center gap-1 text-[11px] text-gray-400 shrink-0">
             <Clock className="w-3 h-3 text-gray-500" />
             <span>{formatRelativeTime(article.published_at)}</span>
           </div>
         </div>
 
         {/* Headline */}
-        <h3 className="font-bold text-sm text-white group-hover:text-emerald-400 transition-colors leading-snug line-clamp-2 mb-2">
+        <h3 className="font-medium text-base text-white group-hover:text-emerald-400 transition-colors leading-snug font-sans mb-2">
           {article.title}
         </h3>
 
-        {/* Short Summary */}
+        {/* Summary */}
         {article.summary && (
-          <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed mb-3">
+          <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed font-sans">
             {article.summary}
           </p>
         )}
       </div>
 
       {/* Footer / Entities & Direct Action */}
-      <div className="pt-3 border-t border-white/5 flex items-center justify-between gap-2 mt-auto">
+      <div className="pt-3 border-t border-white/[0.05] flex items-center justify-between gap-2 text-xs font-mono mt-auto">
         <div className="flex items-center gap-1.5 flex-wrap">
           {article.subcategory && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
               <Building2 className="w-2.5 h-2.5" />
               {article.subcategory}
             </span>
           )}
           {article.entities && article.entities.length > 0 && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold">
               {article.entities[0].ticker || article.entities[0].sector}
             </span>
           )}
@@ -122,21 +113,20 @@ export function NewsCard({ article, onSelect }: NewsCardProps) {
               href={article.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-              title="Open original article"
+              className="text-gray-400 hover:text-white p-1 rounded hover:bg-white/[0.06] transition-colors"
+              title="Open source"
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}
           <button
             onClick={() => onSelect(article)}
-            className="flex items-center gap-0.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium group/btn"
+            className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-semibold"
           >
-            <span>Details</span>
-            <ChevronRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
+            <span>View Research →</span>
           </button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

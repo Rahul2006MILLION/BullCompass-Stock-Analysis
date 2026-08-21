@@ -167,85 +167,84 @@ export default function PortfolioPage() {
         onOpenQuickTrade={() => handleOpenBuy()}
       />
 
-      <div className="space-y-6">
+      <div className="space-y-6 select-none">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              <Briefcase className="w-6 h-6 text-emerald-400" />
-              <span>Portfolio Terminal</span>
-            </h1>
-            <p className="text-xs text-gray-400 mt-1">
-              Active stock positions, live valuations, and automated weighted-average cost accounting
-            </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(111,227,166,0.8)]" />
+            <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
+              PORTFOLIO ACCOUNTING · WEIGHTED-AVERAGE COST BASIS
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 font-mono text-xs">
             <Button
               variant="outline"
               size="sm"
               onClick={handleManualSync}
               disabled={isPolling}
-              className="text-xs border-white/10 hover:border-white/20"
+              className="border-white/10 hover:border-white/20 py-1"
             >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isPolling ? "animate-spin text-emerald-400" : ""}`} />
-              {isPolling ? "Syncing..." : "Sync Quotes"}
+              <RefreshCw className={`w-3 h-3 mr-1 ${isPolling ? "animate-spin text-emerald-400" : ""}`} />
+              {isPolling ? "10s Polling..." : "Sync Quotes"}
             </Button>
-            <Button variant="primary" size="sm" onClick={() => setIsAddModalOpen(true)} className="text-xs">
-              <Plus className="w-4 h-4 mr-1" />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsAddModalOpen(true)}
+              className="font-semibold py-1 bg-emerald-500 text-black hover:bg-emerald-400"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
               Add Holding
             </Button>
           </div>
         </div>
 
         {/* Portfolio Summary Strip */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          <div className="p-4 rounded-2xl bg-[#0d121a] border border-white/8">
-            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
-              Holdings Count
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
+            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block">
+              HOLDINGS COUNT
             </span>
-            <span className="text-xl font-bold font-mono text-white mt-1 block">
-              {dynamicPortfolio?.total_holdings || 0} Assets
+            <span className="text-xl sm:text-2xl font-light font-mono text-white mt-1 block">
+              {dynamicPortfolio?.total_holdings || 0} <span className="text-xs text-gray-500 font-sans">Assets</span>
             </span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#0d121a] border border-white/8">
-            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
-              Total Invested
+          <div className="p-5 rounded-xl editorial-frame editorial-frame-hover">
+            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block">
+              TOTAL INVESTED
             </span>
-            <span className="text-xl font-bold font-mono text-white mt-1 block">
+            <span className="text-2xl font-light font-mono text-white mt-1.5 block">
               {formatCurrency(dynamicPortfolio?.total_invested)}
             </span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#0d121a] border border-white/8">
-            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
-              Current Market Value
+          <div className="p-5 rounded-xl editorial-frame editorial-frame-hover">
+            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block">
+              CURRENT MARKET VALUE
             </span>
-            <span className="text-xl font-bold font-mono text-emerald-400 mt-1 block">
+            <span className="text-2xl font-light font-mono text-emerald-400 mt-1.5 block">
               {formatCurrency(dynamicPortfolio?.total_current_value)}
             </span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#0d121a] border border-white/8">
-            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
-              Total Unrealized P&L
+          <div className="p-5 rounded-xl editorial-frame editorial-frame-hover">
+            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block">
+              TOTAL UNREALIZED P&L
             </span>
             <span
-              className={`text-xl font-bold font-mono mt-1 block ${
+              className={`text-2xl font-light font-mono mt-1.5 block ${
                 isPositive ? "text-emerald-400" : "text-rose-400"
               }`}
             >
-              {formatCurrency(dynamicPortfolio?.total_unrealized_profit)} (
-              {formatPercentage(dynamicPortfolio?.total_return_percentage)})
+              {formatCurrency(dynamicPortfolio?.total_unrealized_profit)}{" "}
+              <span className="text-xs font-semibold">
+                ({formatPercentage(dynamicPortfolio?.total_return_percentage)})
+              </span>
             </span>
           </div>
-        </motion.div>
+        </div>
 
         {/* Holdings Grid & Table */}
         <motion.div

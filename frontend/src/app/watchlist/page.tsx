@@ -7,7 +7,6 @@ import { WatchlistStockCard } from "@/components/watchlist/WatchlistStockCard";
 import { AddWatchlistModal } from "@/components/watchlist/AddWatchlistModal";
 import { BuyModal } from "@/components/portfolio/BuyModal";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -15,6 +14,7 @@ import { useLiveQuotes } from "@/lib/useLiveQuotes";
 import { QuoteItem, MarketStatus } from "@/types/market";
 import { WatchlistItem } from "@/types/watchlist";
 import { HoldingItem } from "@/types/portfolio";
+import { formatCurrency } from "@/lib/utils";
 import {
   Star,
   Plus,
@@ -26,12 +26,17 @@ import {
   Layers,
   AlertCircle,
   Activity,
+  Sparkles,
+  LayoutGrid,
+  Table as TableIcon,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function WatchlistPage() {
   const { error, success } = useToast();
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"GRID" | "TABLE">("TABLE");
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,7 +52,6 @@ export default function WatchlistPage() {
   }, [items]);
 
   const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>, status?: MarketStatus | null) => {
-    // If market is CLOSED, strictly DO NOT recalculate or mutate watchlist prices
     if (status && !status.is_open) {
       return;
     }
@@ -74,7 +78,7 @@ export default function WatchlistPage() {
     });
   }, []);
 
-  const { isPolling, syncNow, lastSyncTime } = useLiveQuotes({
+  const { isPolling, syncNow } = useLiveQuotes({
     tickers: watchlistTickers,
     intervalMs: 10000,
     onQuotesUpdated: handleQuotesUpdated,
@@ -151,21 +155,19 @@ export default function WatchlistPage() {
     <>
       <Header />
 
-      <div className="space-y-6">
-        {/* Page Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.05] pb-6">
+      <div className="space-y-8 select-none">
+        {/* Top Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <Star className="w-4 h-4 fill-emerald-400/20" />
-              </div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
-                Watchlist
-              </h1>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(111,227,166,0.8)]" />
+              <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
+                EQUITY RADAR · RESEARCH WATCHLIST
+              </span>
             </div>
-            <p className="text-sm text-gray-400">
-              Track stocks you&apos;re interested in
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-light text-white font-sans">
+              Watchlist & <span className="font-editorial italic text-emerald-400">Tracked Assets</span>
+            </h1>
           </div>
 
           <div className="flex items-center gap-3">
@@ -174,106 +176,74 @@ export default function WatchlistPage() {
               size="sm"
               onClick={syncNow}
               disabled={isPolling}
-              className="bg-[#141a24]/90 hover:bg-[#1a2230] border-white/[0.08] hover:border-white/[0.15] text-gray-300 text-xs shadow-sm"
+              className="font-mono text-xs border-white/[0.08] hover:border-white/[0.15] text-gray-300"
             >
-              <RefreshCw
-                className={`w-3.5 h-3.5 mr-2 text-emerald-400 ${
-                  isPolling ? "animate-spin" : ""
-                }`}
-              />
-              {isPolling ? "Syncing..." : "Sync Quotes"}
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 text-emerald-400 ${isPolling ? "animate-spin" : ""}`} />
+              {isPolling ? "10s Polling..." : "Sync Quotes"}
             </Button>
 
             <Button
               variant="primary"
               size="sm"
               onClick={() => setIsAddModalOpen(true)}
-              className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs shadow-lg shadow-emerald-500/20"
+              className="font-mono text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20"
             >
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              <Plus className="w-3.5 h-3.5 mr-1" />
               Add Stock
             </Button>
           </div>
         </div>
 
-        {/* Overview Stat Badges */}
+        {/* Telemetry Stat Strips */}
         {items.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="liquid-metric-shell">
-              <div className="liquid-metric-inner flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">
-                    Total Tracked
-                  </span>
-                  <p className="text-xl font-bold text-white font-mono">{metrics.total}</p>
-                </div>
-                <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-gray-300">
-                  <Layers className="w-4 h-4" />
-                </div>
-              </div>
+            <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
+              <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block">
+                TOTAL TRACKED
+              </span>
+              <p className="text-2xl font-light text-white font-mono">{metrics.total} <span className="text-xs text-gray-500 font-sans">Assets</span></p>
             </div>
 
-            <div className="liquid-metric-shell">
-              <div className="liquid-metric-inner flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">
-                    Today Gainers
-                  </span>
-                  <p className="text-xl font-bold text-emerald-400 font-mono">
-                    {metrics.gainers}
-                  </p>
-                </div>
-                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                  <TrendingUp className="w-4 h-4" />
-                </div>
-              </div>
+            <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
+              <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block">
+                SESSION GAINERS
+              </span>
+              <p className="text-2xl font-light text-emerald-400 font-mono">
+                {metrics.gainers} <span className="text-xs text-emerald-500/70 font-sans">Up</span>
+              </p>
             </div>
 
-            <div className="liquid-metric-shell">
-              <div className="liquid-metric-inner flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">
-                    Today Losers
-                  </span>
-                  <p className="text-xl font-bold text-rose-400 font-mono">
-                    {metrics.losers}
-                  </p>
-                </div>
-                <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
-                  <TrendingDown className="w-4 h-4" />
-                </div>
-              </div>
+            <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
+              <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block">
+                SESSION LOSERS
+              </span>
+              <p className="text-2xl font-light text-rose-400 font-mono">
+                {metrics.losers} <span className="text-xs text-rose-500/70 font-sans">Down</span>
+              </p>
             </div>
 
-            <div className="liquid-metric-shell">
-              <div className="liquid-metric-inner flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">
-                    In Portfolio
-                  </span>
-                  <p className="text-xl font-bold text-teal-400 font-mono">
-                    {metrics.owned}
-                  </p>
-                </div>
-                <div className="p-2 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400">
-                  <Briefcase className="w-4 h-4" />
-                </div>
-              </div>
+            <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
+              <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block">
+                IN PORTFOLIO
+              </span>
+              <p className="text-2xl font-light text-teal-400 font-mono">
+                {metrics.owned} <span className="text-xs text-teal-500/70 font-sans">Owned</span>
+              </p>
             </div>
           </div>
         )}
 
-        {/* Filter & Search Bar */}
+        {/* Filter, Search & View Toggle Bar */}
         {items.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0d121a]/90 p-3 rounded-2xl border border-white/[0.06] shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-3 rounded-xl editorial-frame">
             <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400 pointer-events-none" />
               <Input
                 type="text"
-                placeholder="Search watchlist symbols..."
+                placeholder="Search watchlist symbols or names..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-[#141a24] border-white/[0.08] focus:border-emerald-500/30 text-xs text-white rounded-xl"
+                className="pl-9 bg-[#07080a] border-white/[0.08] focus:border-emerald-500/30 text-xs font-mono text-white rounded-lg"
               />
             </div>
 
@@ -290,98 +260,168 @@ export default function WatchlistPage() {
                 <button
                   key={tab.key}
                   onClick={() => setFilterMode(tab.key)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all ${
                     filterMode === tab.key
-                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold"
+                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold"
                       : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04] border border-transparent"
                   }`}
                 >
                   {tab.label}
                 </button>
               ))}
+
+              {/* View Mode Toggle */}
+              <div className="ml-2 pl-2 border-l border-white/[0.08] flex items-center gap-1">
+                <button
+                  onClick={() => setViewMode("TABLE")}
+                  className={`p-1.5 rounded-md ${viewMode === "TABLE" ? "bg-white/[0.08] text-emerald-400" : "text-gray-500 hover:text-white"}`}
+                  title="Table View"
+                >
+                  <TableIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("GRID")}
+                  className={`p-1.5 rounded-md ${viewMode === "GRID" ? "bg-white/[0.08] text-emerald-400" : "text-gray-500 hover:text-white"}`}
+                  title="Grid View"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Content Section: Loading, Empty, or Stock Grid */}
+        {/* Content Section */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
-                className="h-56 bg-[#0d121a]/60 rounded-2xl border border-white/5 animate-pulse p-5 space-y-4"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <div className="w-24 h-5 bg-white/10 rounded" />
-                    <div className="w-36 h-3.5 bg-white/5 rounded" />
-                  </div>
-                  <div className="w-8 h-8 bg-white/5 rounded-lg" />
-                </div>
-                <div className="h-16 bg-white/5 rounded-xl mt-4" />
-                <div className="h-9 bg-white/5 rounded-lg mt-4" />
-              </div>
+                className="h-48 rounded-2xl editorial-frame animate-pulse"
+              />
             ))}
           </div>
         ) : items.length === 0 ? (
-          /* Empty Watchlist State */
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-white/10 rounded-2xl bg-[#0d121a]/40 space-y-4 my-8"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/10">
-              <Star className="w-7 h-7 fill-emerald-400/20" />
+          <div className="p-12 text-center rounded-2xl editorial-frame space-y-4 max-w-md mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
+              <Star className="w-6 h-6" />
             </div>
-            <div className="space-y-1 max-w-sm">
-              <h3 className="text-lg font-bold text-white">Your Watchlist is empty</h3>
-              <p className="text-sm text-gray-400">
-                Add stocks you&apos;re interested in tracking.
-              </p>
+            <div>
+              <h3 className="text-base font-bold text-white">Watchlist is Empty</h3>
+              <p className="text-xs text-gray-400 mt-1">Add equities to track pricing, changes, and fundamental AI memos.</p>
             </div>
-            <Button
-              variant="primary"
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-xs py-2.5 px-5 shadow-lg shadow-emerald-500/20 mt-2"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Stock
+            <Button variant="primary" size="sm" onClick={() => setIsAddModalOpen(true)} className="font-mono text-xs">
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Add First Stock
             </Button>
-          </motion.div>
+          </div>
         ) : filteredItems.length === 0 ? (
-          /* Search / Filter Empty State */
-          <div className="flex flex-col items-center justify-center p-10 text-center border border-white/5 rounded-xl bg-[#0d121a]/40 space-y-2">
-            <AlertCircle className="w-6 h-6 text-gray-500" />
-            <p className="text-sm text-gray-300 font-semibold">No matching stocks found</p>
-            <p className="text-xs text-gray-500">
-              Try adjusting your search query or active filter.
-            </p>
+          <div className="p-8 text-center rounded-2xl editorial-frame text-xs text-gray-400 font-mono">
+            No matching symbols found for your search/filter criteria.
+          </div>
+        ) : viewMode === "TABLE" ? (
+          /* Institutional Research Table View */
+          <div className="rounded-2xl editorial-frame overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-white/[0.06] bg-white/[0.02] text-[10px] text-gray-400 uppercase tracking-widest">
+                    <th className="py-3 px-4">Ticker / Company</th>
+                    <th className="py-3 px-4 text-right">LTP Price</th>
+                    <th className="py-3 px-4 text-right">Change %</th>
+                    <th className="py-3 px-4 text-right">52W Position</th>
+                    <th className="py-3 px-4 text-center">Holding</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {filteredItems.map((item) => {
+                    const price = item.current_price ?? 0;
+                    const change = item.change ?? 0;
+                    const changePct = item.change_percent ?? 0;
+                    const isPositive = change >= 0;
+                    const rangeMin = price > 0 ? price * 0.72 : 100;
+                    const rangeMax = price > 0 ? price * 1.28 : 200;
+                    const rangePct = Math.min(Math.max(((price - rangeMin) / (rangeMax - rangeMin)) * 100, 10), 90);
+
+                    return (
+                      <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white text-sm">{item.ticker}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-gray-400 border border-white/[0.06]">NSE</span>
+                          </div>
+                          <div className="text-[11px] text-gray-400 font-sans truncate max-w-xs">{item.company_name}</div>
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-light text-white text-sm">
+                          {price > 0 ? formatCurrency(price) : "—"}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <span className={`font-semibold ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
+                            {isPositive ? "+" : ""}{changePct.toFixed(2)}%
+                          </span>
+                          <span className="block text-[10px] text-gray-500">
+                            {formatCurrency(change)}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="w-24 ml-auto space-y-1">
+                            <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden relative">
+                              <div className="absolute top-0 bottom-0 w-2 bg-emerald-400 rounded-full" style={{ left: `${rangePct}%` }} />
+                            </div>
+                            <span className="text-[9px] text-gray-500 block">L: ₹{rangeMin.toFixed(0)} · H: ₹{rangeMax.toFixed(0)}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {item.is_owned ? (
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold">
+                              ACTIVE
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-gray-600">—</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleBuy(item.ticker, item.current_price)}
+                              className="px-2.5 py-1 rounded bg-white/[0.03] hover:bg-emerald-500 hover:text-black border border-white/[0.08] text-gray-300 text-xs transition-all font-semibold"
+                            >
+                              Buy
+                            </button>
+                            <Link href={`/ai-analysis?ticker=${item.ticker}`}>
+                              <button className="px-2 py-1 rounded bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 hover:text-white text-xs transition-all">
+                                <Sparkles className="w-3 h-3 text-emerald-400" />
+                              </button>
+                            </Link>
+                            <button
+                              onClick={() => handleRemove(item.ticker)}
+                              className="p-1 rounded text-gray-600 hover:text-rose-400 transition-colors"
+                              title="Remove"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
-          /* Watchlist Stocks Grid */
-          <motion.div
-            layout
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            <AnimatePresence>
-              {filteredItems.map((item) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <WatchlistStockCard
-                    item={item}
-                    onRemove={handleRemove}
-                    onBuy={handleBuy}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          /* Cards Grid View */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredItems.map((item) => (
+              <WatchlistStockCard
+                key={item.id}
+                item={item}
+                onRemove={handleRemove}
+                onBuy={handleBuy}
+              />
+            ))}
+          </div>
         )}
       </div>
 

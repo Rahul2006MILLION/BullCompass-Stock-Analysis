@@ -97,7 +97,10 @@ export function ProfitLossBarChart({ holdings }: ProfitLossBarChartProps) {
               tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
             />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              cursor={{ fill: "rgba(255, 255, 255, 0.04)" }}
+              content={<CustomTooltip />}
+            />
             <Bar
               dataKey="profit"
               radius={[4, 4, 0, 0]}

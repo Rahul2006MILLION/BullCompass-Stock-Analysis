@@ -11,6 +11,8 @@ import { AddHoldingModal } from "@/components/portfolio/AddHoldingModal";
 import { BuyModal } from "@/components/portfolio/BuyModal";
 import { SellModal } from "@/components/portfolio/SellModal";
 import { EditHoldingModal } from "@/components/portfolio/EditHoldingModal";
+import { MarketBreadthCard } from "@/components/market/MarketBreadthCard";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useLiveQuotes } from "@/lib/useLiveQuotes";
@@ -229,31 +231,27 @@ export default function DashboardPage() {
             1. TOP LIVE MARKET TELEMETRY (COMPACT TERMINAL HEADER)
             ========================================================================= */}
         <section className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(111,227,166,0.8)]" />
-              <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
-                NATIONAL STOCK EXCHANGE (NSE) · LIVE 10S FEED
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 font-mono text-xs">
-              <button
-                onClick={handleManualSync}
-                disabled={isPolling}
-                className="px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.08] text-gray-300 hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-1.5"
-              >
-                <RefreshCw className={`w-3 h-3 text-emerald-400 ${isPolling ? "animate-spin" : ""}`} />
-                <span>{isPolling ? "10s Polling..." : "Sync Quotes"}</span>
-              </button>
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="px-3 py-1 rounded-lg font-semibold bg-emerald-500 text-black hover:bg-emerald-400 transition-all"
-              >
-                + Add Holding
-              </button>
-            </div>
-          </div>
+          <PageHeader
+            eyebrow="NATIONAL STOCK EXCHANGE (NSE) · LIVE 10S FEED"
+            actions={
+              <>
+                <button
+                  onClick={handleManualSync}
+                  disabled={isPolling}
+                  className="px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.08] text-gray-300 hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-1.5 font-mono text-xs"
+                >
+                  <RefreshCw className={`w-3 h-3 text-emerald-400 ${isPolling ? "animate-spin" : ""}`} />
+                  <span>{isPolling ? "10s Polling..." : "Sync Quotes"}</span>
+                </button>
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="px-3 py-1 rounded-lg font-semibold bg-emerald-500 text-black hover:bg-emerald-400 transition-all font-mono text-xs"
+                >
+                  + Add Holding
+                </button>
+              </>
+            }
+          />
 
           {/* Indices Triad + Breadth Bar */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -309,18 +307,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Market Breadth */}
-            <div className="p-4 rounded-xl editorial-frame editorial-frame-hover space-y-1">
-              <div className="flex items-center justify-between text-[10px] font-mono text-gray-400 uppercase tracking-wider">
-                <span>BREADTH</span>
-                <span className="text-emerald-400 text-[10px] font-semibold">61% ADV</span>
-              </div>
-              <div className="text-xl sm:text-2xl font-light font-mono text-white tracking-tight">
-                1,412 / 918
-              </div>
-              <div className="w-full h-1 bg-rose-500/30 rounded-full overflow-hidden flex mt-1">
-                <div className="h-full bg-emerald-400 rounded-full" style={{ width: "61%" }} />
-              </div>
-            </div>
+            <MarketBreadthCard advancing={1412} declining={918} />
           </div>
 
           {/* Sector Inflow Strip */}

@@ -6,6 +6,7 @@ import { NewsItem, NewsMetadataResponse } from "@/types/news";
 import { NewsCard } from "@/components/news/NewsCard";
 import { ImportantNewsStrip } from "@/components/news/ImportantNewsStrip";
 import { ArticleDetailModal } from "@/components/news/ArticleDetailModal";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
@@ -132,40 +133,31 @@ export default function NewsPage() {
     selectedImportance !== "ALL";
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12 select-none">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 select-none">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(111,227,166,0.8)]" />
-            <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
-              REGULATORY & CAPITAL NEWSFEED
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-light text-white font-sans">
-            Market Intelligence & <span className="font-editorial italic text-emerald-400">Filings</span>
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {metadata && (
-            <span className="text-xs font-mono text-gray-400 bg-white/[0.03] px-3 py-1.5 rounded-lg border border-white/[0.06] hidden sm:inline-block">
-              <strong className="text-white">{metadata.total_count}</strong> Filings Stored
-            </span>
-          )}
-          <Button
-            variant="mint"
-            size="sm"
-            onClick={handleSyncNews}
-            disabled={isSyncing}
-            isLoading={isSyncing}
-            className="font-mono text-xs font-semibold shadow-lg shadow-emerald-500/10"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
-            {isSyncing ? "Syncing..." : "Sync Feeds"}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="REGULATORY & CAPITAL NEWSFEED"
+        actions={
+          <>
+            {metadata && (
+              <span className="text-xs font-mono text-gray-400 bg-white/[0.03] px-3 py-1.5 rounded-lg border border-white/[0.06] hidden sm:inline-block">
+                <strong className="text-white">{metadata.total_count}</strong> Filings Stored
+              </span>
+            )}
+            <Button
+              variant="mint"
+              size="sm"
+              onClick={handleSyncNews}
+              disabled={isSyncing}
+              isLoading={isSyncing}
+              className="font-mono text-xs font-semibold shadow-lg shadow-emerald-500/10"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "Syncing..." : "Sync Feeds"}
+            </Button>
+          </>
+        }
+      />
 
       {/* Market Moving Highlights */}
       {!isAnyFilterActive && highImpactArticles.length > 0 && (

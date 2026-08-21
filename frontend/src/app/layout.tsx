@@ -3,6 +3,7 @@ import { Newsreader, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google"
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MarketCursorLayer } from "@/components/layout/MarketCursorLayer";
+import { CardInteractionLayer } from "@/components/layout/CardInteractionLayer";
 import { ToastProvider } from "@/components/ui/Toast";
 
 const editorialFont = Newsreader({
@@ -45,6 +46,7 @@ export default function RootLayout({
     >
       <body className="bg-[#07080a] text-[#f1efe8] min-h-screen flex antialiased selection:bg-emerald-500/30 selection:text-emerald-300 relative overflow-x-hidden font-sans">
         <MarketCursorLayer />
+        <CardInteractionLayer />
         <ToastProvider>
           {/* Main App Layout */}
           <div className="flex w-full min-h-screen relative z-10 p-3 gap-4">

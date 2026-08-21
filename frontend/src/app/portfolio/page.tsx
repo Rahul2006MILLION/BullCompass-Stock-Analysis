@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
 import { HoldingsGrid } from "@/components/portfolio/HoldingsGrid";
+import { SuggestedStocksSection } from "@/components/portfolio/SuggestedStocksSection";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AddHoldingModal } from "@/components/portfolio/AddHoldingModal";
 import { BuyModal } from "@/components/portfolio/BuyModal";
 import { SellModal } from "@/components/portfolio/SellModal";
@@ -169,36 +171,32 @@ export default function PortfolioPage() {
 
       <div className="space-y-6 select-none">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(111,227,166,0.8)]" />
-            <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
-              PORTFOLIO ACCOUNTING · WEIGHTED-AVERAGE COST BASIS
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 font-mono text-xs">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualSync}
-              disabled={isPolling}
-              className="border-white/10 hover:border-white/20 py-1"
-            >
-              <RefreshCw className={`w-3 h-3 mr-1 ${isPolling ? "animate-spin text-emerald-400" : ""}`} />
-              {isPolling ? "10s Polling..." : "Sync Quotes"}
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsAddModalOpen(true)}
-              className="font-semibold py-1 bg-emerald-500 text-black hover:bg-emerald-400"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Add Holding
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="PORTFOLIO ACCOUNTING · WEIGHTED-AVERAGE COST BASIS"
+          actions={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManualSync}
+                disabled={isPolling}
+                className="border-white/10 hover:border-white/20 py-1 font-mono text-xs"
+              >
+                <RefreshCw className={`w-3 h-3 mr-1 ${isPolling ? "animate-spin text-emerald-400" : ""}`} />
+                {isPolling ? "10s Polling..." : "Sync Quotes"}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsAddModalOpen(true)}
+                className="font-semibold py-1 bg-emerald-500 text-black hover:bg-emerald-400 font-mono text-xs"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Add Holding
+              </Button>
+            </>
+          }
+        />
 
         {/* Portfolio Summary Strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -261,6 +259,25 @@ export default function PortfolioPage() {
             onDelete={handleDeleteHolding}
             onAddNew={() => setIsAddModalOpen(true)}
             isLoading={isLoading}
+          />
+        </motion.div>
+
+        {/* Suggested Stocks based on News & Corporate Intelligence */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <SuggestedStocksSection
+            onQuickBuy={(item) =>
+              handleOpenBuy({
+                ticker: item.ticker,
+                current_price: item.current_price,
+                quantity: 1,
+                average_buy_price: item.current_price || 0,
+              } as HoldingItem)
+            }
           />
         </motion.div>
       </div>

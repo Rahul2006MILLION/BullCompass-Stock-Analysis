@@ -42,8 +42,12 @@ export function WatchlistStockCard({
   const rangePct = Math.min(Math.max(((price - rangeMin) / (rangeMax - rangeMin)) * 100, 10), 90);
 
   return (
-    <div className="editorial-frame editorial-frame-hover p-5 rounded-2xl flex flex-col justify-between h-full group space-y-4">
-      <div>
+    <div
+      data-interactive-card="true"
+      className="editorial-frame editorial-frame-hover p-5 rounded-2xl flex flex-col justify-between h-full group space-y-4 relative overflow-hidden"
+    >
+      <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+        <div>
         {/* Header: Ticker, Badges & Remove */}
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
@@ -163,6 +167,7 @@ export function WatchlistStockCard({
             AI Report
           </Button>
         </Link>
+      </div>
       </div>
     </div>
   );

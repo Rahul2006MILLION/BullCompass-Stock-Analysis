@@ -49,9 +49,11 @@ export function NewsCard({ article, onSelect }: NewsCardProps) {
   return (
     <div
       onClick={() => onSelect(article)}
-      className="editorial-frame editorial-frame-hover p-5 rounded-2xl flex flex-col justify-between cursor-pointer group space-y-4"
+      data-interactive-card="true"
+      className="editorial-frame editorial-frame-hover p-5 rounded-2xl flex flex-col justify-between cursor-pointer group space-y-4 relative overflow-hidden"
     >
-      <div>
+      <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+        <div>
         {/* Meta telemetry bar */}
         <div className="flex items-center justify-between gap-2 mb-2 text-xs font-mono">
           <div className="flex items-center gap-2 flex-wrap">
@@ -126,6 +128,7 @@ export function NewsCard({ article, onSelect }: NewsCardProps) {
             <span>View Research →</span>
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

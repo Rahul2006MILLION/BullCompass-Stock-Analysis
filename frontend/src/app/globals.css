@@ -53,21 +53,88 @@
   font-family: var(--font-mono), "JetBrains Mono", monospace;
 }
 
-/* Institutional hairline frame material */
+/* Institutional hairline frame material with localized cursor highlight */
 .editorial-frame {
+  position: relative;
+  overflow: hidden;
+  --mouse-x: 50%;
+  --mouse-y: 50%;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(13, 16, 17, 0.75) 0%, rgba(7, 8, 10, 0.9) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.5);
+  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              background 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Localized cursor-following radial highlight (strictly clipped inside card) */
+.editorial-frame::after,
+.fintech-card::after,
+.liquid-card-shell::after,
+.liquid-metric-shell::after,
+[data-interactive-card]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  background: radial-gradient(
+    380px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 255, 255, 0.045) 0%,
+    rgba(111, 227, 166, 0.018) 35%,
+    transparent 70%
+  );
+  transition: opacity 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editorial-frame:hover::after,
+.fintech-card:hover::after,
+.liquid-card-shell:hover::after,
+.liquid-metric-shell:hover::after,
+[data-interactive-card]:hover::after {
+  opacity: 1;
 }
 
 .editorial-frame-hover {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              background 350ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .editorial-frame-hover:hover {
+  transform: translateY(-2.5px) scale(1.005);
   border-color: rgba(255, 255, 255, 0.14);
-  transform: translateY(-1.5px);
+  background: linear-gradient(180deg, rgba(18, 22, 25, 0.85) 0%, rgba(10, 13, 15, 0.95) 100%);
+  box-shadow: 0 16px 32px -10px rgba(0, 0, 0, 0.75), 0 0 24px -6px rgba(111, 227, 166, 0.04);
+}
+
+/* Institutional Fintech Card Base */
+.fintech-card {
+  position: relative;
+  overflow: hidden;
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0d121a;
+  box-shadow: 0 6px 22px -6px rgba(0, 0, 0, 0.6);
+  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fintech-card:hover {
+  transform: translateY(-2.5px) scale(1.005);
+  border-color: rgba(255, 255, 255, 0.15);
+  background-color: #121722;
+  box-shadow: 0 16px 32px -10px rgba(0, 0, 0, 0.75), 0 0 24px -6px rgba(111, 227, 166, 0.04);
 }
 
 /* Static ambient hairline market grid (zero mouse/cursor tracking) */
@@ -206,9 +273,9 @@
     0 12px 28px -8px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
     inset 0 -1px 1px 0 rgba(0, 0, 0, 0.35);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
 }
 
@@ -228,12 +295,12 @@
   border-radius: 20px 20px 0 0;
   pointer-events: none;
   z-index: 1;
-  transition: opacity 0.25s ease;
+  transition: opacity 350ms ease;
 }
 
 .liquid-card-shell:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.09);
+  transform: translateY(-2.5px) scale(1.005);
+  border-color: rgba(255, 255, 255, 0.14);
   box-shadow: 
     0 18px 36px -8px rgba(0, 0, 0, 0.75),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
@@ -280,12 +347,13 @@
     inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
     inset 0 -1px 1px 0 rgba(0, 0, 0, 0.35);
   overflow: hidden;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1), border-color 350ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .liquid-metric-shell:hover {
-  border-color: rgba(255, 255, 255, 0.09);
-  transform: translateY(-1.5px);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px) scale(1.003);
+  box-shadow: 0 14px 28px -6px rgba(0, 0, 0, 0.7);
 }
 
 .liquid-metric-inner {

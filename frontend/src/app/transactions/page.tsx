@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Header } from "@/components/layout/Header";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { api } from "@/lib/api";
@@ -60,31 +61,22 @@ export default function TransactionsPage() {
     <>
       <Header />
 
-      <div className="space-y-8 select-none">
+      <div className="space-y-6 select-none">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(111,227,166,0.8)]" />
-              <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
-                AUDIT COMPLIANCE · SETTLEMENT TRAIL
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-light text-white font-sans">
-              Trade <span className="font-editorial italic text-emerald-400">Audit Ledger</span>
-            </h1>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchTransactions}
-            className="font-mono text-xs border-white/[0.08] hover:border-white/[0.15] text-gray-300"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 text-emerald-400 ${isLoading ? "animate-spin" : ""}`} />
-            Sync Ledger
-          </Button>
-        </div>
+        <PageHeader
+          eyebrow="AUDIT COMPLIANCE · SETTLEMENT TRAIL"
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchTransactions}
+              className="font-mono text-xs border-white/[0.08] hover:border-white/[0.15] text-gray-300"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 text-emerald-400 ${isLoading ? "animate-spin" : ""}`} />
+              Sync Ledger
+            </Button>
+          }
+        />
 
         {/* Realized P&L Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -215,15 +215,18 @@ export const NetWorthAreaChart = React.memo(function NetWorthAreaChart({
               tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
               domain={["auto", "auto"]}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              cursor={{ stroke: "rgba(111, 227, 166, 0.4)", strokeWidth: 1, strokeDasharray: "3 3" }}
+              content={<CustomTooltip />}
+            />
             <Area
               type="monotone"
               dataKey="netWorth"
               name="Net Worth"
               stroke="#10b981"
-              strokeWidth={2.5}
-              dot={{ r: 3.5, fill: "#10b981", strokeWidth: 1.5, stroke: "#0b0f17" }}
-              activeDot={{ r: 5.5, fill: "#10b981", stroke: "#ffffff", strokeWidth: 2 }}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4.5, fill: "#10b981", stroke: "#ffffff", strokeWidth: 2 }}
               fillOpacity={1}
               fill="url(#netWorthGradient)"
               isAnimationActive={true}
@@ -238,6 +241,7 @@ export const NetWorthAreaChart = React.memo(function NetWorthAreaChart({
               strokeWidth={1.5}
               strokeDasharray="4 4"
               dot={false}
+              activeDot={{ r: 3.5, fill: "#60a5fa", stroke: "#ffffff", strokeWidth: 1.5 }}
               fillOpacity={1}
               fill="url(#investedGradient)"
               isAnimationActive={true}

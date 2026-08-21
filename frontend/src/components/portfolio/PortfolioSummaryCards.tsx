@@ -56,19 +56,19 @@ export function PortfolioSummaryCards({
       <motion.div custom={0} initial="hidden" animate="visible" variants={cardVariants}>
         <Card
           glow="mint"
-          className="bg-gradient-to-br from-[#0e1620] via-[#0c121a] to-[#090c12] border-emerald-500/20"
+          className="group/summary bg-gradient-to-br from-[#0e1620] via-[#0c121a] to-[#090c12] border-emerald-500/20"
         >
           <div className="flex items-center justify-between text-gray-400 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
               Total Net Worth
             </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover/summary:border-emerald-400/50 group-hover/summary:bg-emerald-500/20 transition-all duration-300">
               <Wallet className="w-4 h-4" />
             </div>
           </div>
 
           <div className="space-y-1">
-            <div className="text-2xl font-bold tracking-tight text-white font-mono">
+            <div className="text-2xl font-bold tracking-tight text-white font-mono transition-transform duration-300 group-hover/summary:scale-[1.015] group-hover/summary:brightness-110 origin-left">
               <AnimatedNumber value={netWorth} />
             </div>
 
@@ -84,18 +84,18 @@ export function PortfolioSummaryCards({
 
       {/* 2. Total Invested */}
       <motion.div custom={1} initial="hidden" animate="visible" variants={cardVariants}>
-        <Card className="bg-gradient-to-br from-[#10141e] via-[#0c121a] to-[#090c12]">
+        <Card className="group/summary bg-gradient-to-br from-[#10141e] via-[#0c121a] to-[#090c12]">
           <div className="flex items-center justify-between text-gray-400 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
               Total Invested
             </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover/summary:border-blue-400/50 group-hover/summary:bg-blue-500/20 transition-all duration-300">
               <PiggyBank className="w-4 h-4" />
             </div>
           </div>
 
           <div className="space-y-1">
-            <div className="text-2xl font-bold tracking-tight text-white font-mono">
+            <div className="text-2xl font-bold tracking-tight text-white font-mono transition-transform duration-300 group-hover/summary:scale-[1.015] group-hover/summary:brightness-110 origin-left">
               <AnimatedNumber value={invested} />
             </div>
             <p className="text-xs text-gray-400 pt-1">Principal Capital Deployed</p>
@@ -107,17 +107,17 @@ export function PortfolioSummaryCards({
       <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants}>
         <Card
           glow={isUnrealizedPositive ? "mint" : "coral"}
-          className="bg-gradient-to-br from-[#10141e] via-[#0c121a] to-[#090c12]"
+          className="group/summary bg-gradient-to-br from-[#10141e] via-[#0c121a] to-[#090c12]"
         >
           <div className="flex items-center justify-between text-gray-400 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
               Unrealized P&L
             </span>
             <div
-              className={`w-8 h-8 rounded-xl border flex items-center justify-center ${
+              className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-300 ${
                 isUnrealizedPositive
-                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                  : "bg-rose-500/15 border-rose-500/30 text-rose-400"
+                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 group-hover/summary:border-emerald-400/50 group-hover/summary:bg-emerald-500/20"
+                  : "bg-rose-500/15 border-rose-500/30 text-rose-400 group-hover/summary:border-rose-400/50 group-hover/summary:bg-rose-500/20"
               }`}
             >
               {isUnrealizedPositive ? (
@@ -130,7 +130,7 @@ export function PortfolioSummaryCards({
 
           <div className="space-y-1">
             <div
-              className={`text-2xl font-bold tracking-tight font-mono ${
+              className={`text-2xl font-bold tracking-tight font-mono transition-transform duration-300 group-hover/summary:scale-[1.015] group-hover/summary:brightness-110 origin-left ${
                 isUnrealizedPositive ? "text-emerald-400" : "text-rose-400"
               }`}
             >
@@ -148,19 +148,19 @@ export function PortfolioSummaryCards({
 
       {/* 4. Realized Profit */}
       <motion.div custom={3} initial="hidden" animate="visible" variants={cardVariants}>
-        <Card className="bg-gradient-to-br from-[#10141e] via-[#0c121a] to-[#090c12]">
+        <Card className="group/summary bg-gradient-to-br from-[#10141e] via-[#0c121a] to-[#090c12]">
           <div className="flex items-center justify-between text-gray-400 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
               Realized P&L
             </span>
-            <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
+            <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover/summary:border-purple-400/50 group-hover/summary:bg-purple-500/20 transition-all duration-300">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
 
           <div className="space-y-1">
             <div
-              className={`text-2xl font-bold tracking-tight font-mono ${
+              className={`text-2xl font-bold tracking-tight font-mono transition-transform duration-300 group-hover/summary:scale-[1.015] group-hover/summary:brightness-110 origin-left ${
                 isRealizedPositive ? "text-purple-300" : "text-rose-400"
               }`}
             >

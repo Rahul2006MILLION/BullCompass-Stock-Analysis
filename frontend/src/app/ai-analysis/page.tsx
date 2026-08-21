@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { api } from "@/lib/api";
@@ -98,22 +99,11 @@ function AIAnalysisContent() {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16 select-none">
+    <div className="space-y-6 max-w-7xl mx-auto pb-16 select-none">
       {/* Header */}
-      <div className="border-b border-white/[0.06] pb-4 space-y-1">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(111,227,166,0.8)]" />
-          <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
-            FORENSIC RESEARCH & VALUATION ENGINE
-          </span>
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-light text-white font-sans">
-          Institutional <span className="font-editorial italic text-emerald-400">Equity Intelligence</span>
-        </h1>
-        <p className="text-xs text-gray-400 mt-1 font-sans">
-          Multi-year 3-statement analysis, CFO vs PAT accruals diagnosis, valuation modeling, scenario projections, and causal transmission.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="FORENSIC RESEARCH & VALUATION ENGINE"
+      />
 
       {/* Ticker Search Bar */}
       <div className="p-6 rounded-2xl editorial-frame space-y-4">

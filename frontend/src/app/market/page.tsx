@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Header } from "@/components/layout/Header";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { api } from "@/lib/api";
@@ -124,18 +125,14 @@ export function MarketPage() {
 
       <div className="space-y-6 select-none">
         {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(111,227,166,0.8)]" />
-            <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-semibold">
-              NSE/BSE SATELLITE · LIVE CAPITAL MARKETS
-            </span>
-          </div>
-
-          <div className="text-xs font-mono text-gray-400">
-            <span>BREADTH: 1,412 ADV / 918 DEC (61% NET POSITIVE)</span>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="NSE/BSE SATELLITE · LIVE CAPITAL MARKETS"
+          actions={
+            <div className="text-xs font-mono text-gray-400">
+              <span>BREADTH: 1,412 ADV / 918 DEC (Advancing / Declining · 61% Positive)</span>
+            </div>
+          }
+        />
 
         {/* 1. Indices Triad Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

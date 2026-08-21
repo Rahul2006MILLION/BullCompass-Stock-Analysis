@@ -101,22 +101,22 @@ export function MarketCursorLayer() {
 
       const mode = pageModeRef.current;
 
-      // Spacing configuration per page mode
-      let colSpacing = 68;
-      let rowSpacing = 82;
+      // Spacing configuration calibrated for 2-3x larger, clearer candlesticks
+      let colSpacing = 84;
+      let rowSpacing = 104;
       let densityMod = 4; // modulo for placing candles
 
       if (mode === "market") {
-        colSpacing = 56;
-        rowSpacing = 68;
-        densityMod = 3; // slightly denser
+        colSpacing = 72;
+        rowSpacing = 92;
+        densityMod = 3;
       } else if (mode === "transactions") {
-        colSpacing = 95;
-        rowSpacing = 110;
-        densityMod = 6; // very sparse
+        colSpacing = 110;
+        rowSpacing = 130;
+        densityMod = 5;
       } else if (mode === "news" || mode === "ai-analysis") {
-        colSpacing = 78;
-        rowSpacing = 90;
+        colSpacing = 94;
+        rowSpacing = 114;
         densityMod = 5;
       }
 
@@ -126,17 +126,19 @@ export function MarketCursorLayer() {
       for (let c = 0; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
           if ((c * 7 + r * 11) % densityMod === 0) {
-            // Subtle horizontal jitter for organic market feel
-            const jitterX = ((c * 17 + r * 23) % 24) - 12;
-            const jitterY = ((c * 19 + r * 29) % 20) - 10;
+            // Subtle horizontal jitter for natural organic market chart layout
+            const jitterX = ((c * 17 + r * 23) % 28) - 14;
+            const jitterY = ((c * 19 + r * 29) % 24) - 12;
             const cx = c * colSpacing + colSpacing * 0.5 + jitterX;
             const cy = r * rowSpacing + rowSpacing * 0.5 + jitterY;
 
             const isGreen = (c * 5 + r * 13) % 2 === 0;
-            const bodyH = 6 + ((c * 13 + r * 19) % 18);
-            const wickTop = 3 + ((c * 7 + r * 5) % 10);
-            const wickBtm = 3 + ((c * 11 + r * 17) % 10);
-            const volH = 4 + ((c * 5 + r * 7) % 14);
+            // Enhanced 2-3x body height: 16px to 52px
+            const bodyH = 16 + ((c * 13 + r * 19) % 36);
+            // Enhanced wicks: 8px to 24px
+            const wickTop = 8 + ((c * 7 + r * 5) % 16);
+            const wickBtm = 8 + ((c * 11 + r * 17) % 16);
+            const volH = 8 + ((c * 5 + r * 7) % 20);
             const layer = ((c + r) % 3 === 0) ? 0.35 : ((c + r) % 2 === 0 ? 0.22 : 0.12);
             const tickerItem = DASHBOARD_TICKERS[(c + r) % DASHBOARD_TICKERS.length];
 
@@ -146,7 +148,8 @@ export function MarketCursorLayer() {
               bodyH,
               wickTop,
               wickBtm,
-              width: layer > 0.3 ? 3.5 : 2.5,
+              // Enhanced body width: 7px (far) to 9px (near)
+              width: layer > 0.3 ? 9 : 7,
               isGreen,
               volHeight: volH,
               layer,
@@ -238,29 +241,42 @@ export function MarketCursorLayer() {
         const screenY = candle.y;
         if (screenY < -50 || screenY > height + 50) continue;
 
-        const baseAlpha = 0.018 * candle.layer * 3;
+        const baseAlpha = 0.025 * candle.layer * 3;
         const color = candle.isGreen
-          ? `rgba(111, 227, 166, ${baseAlpha})`
-          : `rgba(227, 134, 118, ${baseAlpha})`;
+          ? `rgba(16, 185, 129, ${baseAlpha})`
+          : `rgba(244, 63, 94, ${baseAlpha})`;
 
         // Wick
         ctx.beginPath();
         ctx.moveTo(candle.x, screenY - candle.bodyH * 0.5 - candle.wickTop);
         ctx.lineTo(candle.x, screenY + candle.bodyH * 0.5 + candle.wickBtm);
         ctx.strokeStyle = color;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
 
         // Body
         ctx.fillStyle = candle.isGreen
-          ? `rgba(111, 227, 166, ${baseAlpha * 0.6})`
-          : `rgba(227, 134, 118, ${baseAlpha * 0.6})`;
-        ctx.fillRect(
-          candle.x - candle.width * 0.5,
-          screenY - candle.bodyH * 0.5,
-          candle.width,
-          candle.bodyH
-        );
+          ? `rgba(16, 185, 129, ${baseAlpha * 0.7})`
+          : `rgba(244, 63, 94, ${baseAlpha * 0.7})`;
+
+        if (typeof ctx.roundRect === "function") {
+          ctx.beginPath();
+          ctx.roundRect(
+            candle.x - candle.width * 0.5,
+            screenY - candle.bodyH * 0.5,
+            candle.width,
+            candle.bodyH,
+            1.5
+          );
+          ctx.fill();
+        } else {
+          ctx.fillRect(
+            candle.x - candle.width * 0.5,
+            screenY - candle.bodyH * 0.5,
+            candle.width,
+            candle.bodyH
+          );
+        }
       }
     };
 
@@ -271,7 +287,7 @@ export function MarketCursorLayer() {
     if (!prefersReducedMotion && !isTouchDevice) {
       window.addEventListener("pointermove", handlePointerMove, { passive: true });
 
-      const proximityRadius = 240;
+      const proximityRadius = 280;
       const proximityRadiusSq = proximityRadius * proximityRadius;
 
       const render = () => {
@@ -289,14 +305,14 @@ export function MarketCursorLayer() {
         ctx.clearRect(0, 0, width, height);
 
         // =====================================================================
-        // Candlesticks with Proximity-Based Illumination (Invisible Flashlight)
+        // Candlesticks with Proximity-Based Illumination & Soft Emerald/Crimson Bloom
         // =====================================================================
         for (const candle of candles) {
           // Parallax depth positioning
           const screenY = candle.y - (currentScrollY * candle.layer);
 
           // Cull candles outside current viewport bounds
-          if (screenY < -80 || screenY > height + 80) continue;
+          if (screenY < -100 || screenY > height + 100) continue;
 
           // Distance from candle center to invisible flashlight cursor
           const dx = candle.x - currentX;
@@ -307,79 +323,128 @@ export function MarketCursorLayer() {
           if (distSq < proximityRadiusSq) {
             const normDist = Math.sqrt(distSq) / proximityRadius;
             // Smooth non-linear cubic falloff: 1 at center, 0 at boundary
-            illumination = Math.pow(1 - normDist, 2.2);
+            illumination = Math.pow(1 - normDist, 2.0);
           }
 
           // Subtle natural price pulse breathing
-          const pulse = Math.sin(time * 1.5 + candle.phase) * 0.005;
-          const baseAlpha = Math.max(0.014 * candle.layer * 2.8 + pulse, 0.01);
+          const pulse = Math.sin(time * 1.5 + candle.phase) * 0.006;
+          const baseAlpha = Math.max(0.018 * candle.layer * 2.8 + pulse, 0.012);
 
-          // Illuminated alpha: scales up smoothly near the cursor
-          const activeAlpha = baseAlpha + illumination * 0.42;
+          // Substantially increased illumination alpha: reaches 0.85-0.95 at center
+          const activeAlpha = baseAlpha + illumination * 0.82;
 
-          // Scale factor: candles closest to cursor expand slightly (+0.5px)
-          const widthScale = candle.width * (1 + illumination * 0.18);
-
-          const strokeColor = candle.isGreen
-            ? `rgba(111, 227, 166, ${activeAlpha})`
-            : `rgba(227, 134, 118, ${activeAlpha})`;
-
-          const bodyFillColor = candle.isGreen
-            ? `rgba(111, 227, 166, ${activeAlpha * 0.65})`
-            : `rgba(227, 134, 118, ${activeAlpha * 0.65})`;
+          // Scale factor: candles closest to cursor expand slightly (+25%)
+          const widthScale = candle.width * (1 + illumination * 0.22);
 
           const topY = screenY - candle.bodyH * 0.5;
           const btmY = screenY + candle.bodyH * 0.5;
 
-          // 1. Wick
+          // Colors
+          const greenEmerald = `rgba(16, 185, 129, ${activeAlpha})`;
+          const greenBody = `rgba(16, 185, 129, ${activeAlpha * 0.85})`;
+          const redCrimson = `rgba(244, 63, 94, ${activeAlpha})`;
+          const redBody = `rgba(244, 63, 94, ${activeAlpha * 0.85})`;
+
+          const strokeColor = candle.isGreen ? greenEmerald : redCrimson;
+          const bodyFillColor = candle.isGreen ? greenBody : redBody;
+
+          // 1. Soft atmospheric bloom/glow aura under cursor illumination
+          if (illumination > 0.06) {
+            const haloAlpha = illumination * 0.16;
+            ctx.fillStyle = candle.isGreen
+              ? `rgba(16, 185, 129, ${haloAlpha})`
+              : `rgba(244, 63, 94, ${haloAlpha})`;
+            
+            // Soft blurred atmospheric halo behind candle
+            ctx.fillRect(
+              candle.x - widthScale * 1.8,
+              topY - 6,
+              widthScale * 3.6,
+              candle.bodyH + 12
+            );
+
+            // GPU-accelerated shadow glow
+            ctx.shadowBlur = Math.round(20 * illumination);
+            ctx.shadowColor = candle.isGreen
+              ? `rgba(16, 185, 129, ${0.55 * illumination})`
+              : `rgba(244, 63, 94, ${0.55 * illumination})`;
+          } else {
+            ctx.shadowBlur = 0;
+          }
+
+          // 2. Wick (thicker 1.5px - 2px for clear financial recognition)
           ctx.beginPath();
           ctx.moveTo(candle.x, topY - candle.wickTop);
           ctx.lineTo(candle.x, btmY + candle.wickBtm);
           ctx.strokeStyle = strokeColor;
-          ctx.lineWidth = 1;
+          ctx.lineWidth = illumination > 0.1 ? 1.75 : 1.25;
+          ctx.lineCap = "round";
           ctx.stroke();
 
-          // 2. Body
+          // 3. Candle Body (with subtle 1.5px corner rounding)
           ctx.fillStyle = bodyFillColor;
-          ctx.fillRect(
-            candle.x - widthScale * 0.5,
-            topY,
-            widthScale,
-            candle.bodyH
-          );
-
-          // 3. Micro volume bar at base (only visible when gently illuminated)
-          if (illumination > 0.08 || baseAlpha > 0.02) {
-            const volAlpha = (baseAlpha + illumination * 0.35) * 0.4;
-            ctx.fillStyle = candle.isGreen
-              ? `rgba(111, 227, 166, ${volAlpha})`
-              : `rgba(227, 134, 118, ${volAlpha})`;
+          if (typeof ctx.roundRect === "function") {
+            ctx.beginPath();
+            ctx.roundRect(
+              candle.x - widthScale * 0.5,
+              topY,
+              widthScale,
+              candle.bodyH,
+              1.5
+            );
+            ctx.fill();
+            // Subtle crisp border outline when illuminated
+            if (illumination > 0.15) {
+              ctx.strokeStyle = candle.isGreen
+                ? `rgba(52, 211, 153, ${activeAlpha * 0.9})`
+                : `rgba(251, 113, 133, ${activeAlpha * 0.9})`;
+              ctx.lineWidth = 1;
+              ctx.stroke();
+            }
+          } else {
             ctx.fillRect(
-              candle.x - 1,
-              btmY + candle.wickBtm + 3,
-              2,
+              candle.x - widthScale * 0.5,
+              topY,
+              widthScale,
+              candle.bodyH
+            );
+          }
+
+          // Reset shadow blur
+          ctx.shadowBlur = 0;
+
+          // 4. Volume bar at base
+          if (illumination > 0.08 || baseAlpha > 0.02) {
+            const volAlpha = (baseAlpha + illumination * 0.65) * 0.5;
+            ctx.fillStyle = candle.isGreen
+              ? `rgba(16, 185, 129, ${volAlpha})`
+              : `rgba(244, 63, 94, ${volAlpha})`;
+            ctx.fillRect(
+              candle.x - 1.5,
+              btmY + candle.wickBtm + 4,
+              3,
               candle.volHeight
             );
           }
 
-          // 4. Subtle Monospace Ticker & Price Tag (revealed on closer proximity)
-          if (illumination > 0.38 && candle.label) {
-            ctx.font = "8.5px 'JetBrains Mono', monospace";
-            ctx.fillStyle = `rgba(241, 239, 232, ${illumination * 0.6})`;
-            ctx.fillText(candle.label, candle.x + 7, topY + 4);
+          // 5. Monospace Ticker & Live Price Tag
+          if (illumination > 0.32 && candle.label) {
+            ctx.font = "9px 'JetBrains Mono', monospace";
+            ctx.fillStyle = `rgba(241, 239, 232, ${illumination * 0.85})`;
+            ctx.fillText(candle.label, candle.x + widthScale * 0.5 + 6, topY + 6);
 
-            if (illumination > 0.62 && candle.subLabel) {
-              ctx.font = "7.5px 'JetBrains Mono', monospace";
+            if (illumination > 0.55 && candle.subLabel) {
+              ctx.font = "8px 'JetBrains Mono', monospace";
               ctx.fillStyle = candle.isGreen
-                ? `rgba(111, 227, 166, ${illumination * 0.55})`
-                : `rgba(227, 134, 118, ${illumination * 0.55})`;
-              ctx.fillText(candle.subLabel, candle.x + 7, topY + 14);
+                ? `rgba(52, 211, 153, ${illumination * 0.85})`
+                : `rgba(251, 113, 133, ${illumination * 0.85})`;
+              ctx.fillText(candle.subLabel, candle.x + widthScale * 0.5 + 6, topY + 18);
             }
           }
         }
 
         // =====================================================================
-        // Page-Specific Subtle Markers (Illuminated only by proximity)
+        // Page-Specific Subtle Markers (Illuminated by proximity)
         // =====================================================================
         for (const marker of extraMarkers) {
           const screenY = marker.y - (currentScrollY * marker.layer);
@@ -393,18 +458,15 @@ export function MarketCursorLayer() {
             const normDist = Math.sqrt(distSq) / proximityRadius;
             const illum = Math.pow(1 - normDist, 2);
 
-            if (illum > 0.2) {
-              ctx.font = "8px 'JetBrains Mono', monospace";
+            if (illum > 0.15) {
+              ctx.font = "8.5px 'JetBrains Mono', monospace";
               ctx.fillStyle = marker.isGreen
-                ? `rgba(111, 227, 166, ${illum * 0.5})`
-                : `rgba(227, 134, 118, ${illum * 0.5})`;
+                ? `rgba(52, 211, 153, ${illum * 0.75})`
+                : `rgba(251, 113, 133, ${illum * 0.75})`;
               ctx.fillText(marker.text, marker.x, screenY);
             }
           }
         }
-
-        // NOTE: Strictly ZERO visible spotlight circle / radial background disk drawn.
-        // The background remains pure deep dark, while only the candles themselves illuminate.
 
         animFrameId = requestAnimationFrame(render);
       };

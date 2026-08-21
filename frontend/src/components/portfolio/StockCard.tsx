@@ -3,8 +3,6 @@
 import React from "react";
 import { HoldingItem } from "@/types/portfolio";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import {
   TrendingUp,
   TrendingDown,
@@ -12,7 +10,8 @@ import {
   MinusCircle,
   Edit2,
   Trash2,
-  Percent,
+  Briefcase,
+  Layers,
 } from "lucide-react";
 
 interface StockCardProps {
@@ -32,22 +31,12 @@ export function StockCard({
   onEdit,
   onDelete,
 }: StockCardProps) {
-  const unrealizedProfit =
-    holding.profit ??
-    (holding.current_price != null
-      ? (holding.current_price - holding.average_buy_price) * holding.quantity
-      : 0);
-
-  const stockNameColor =
-    unrealizedProfit > 0
-      ? "text-emerald-400 group-hover:text-emerald-300"
-      : unrealizedProfit < 0
-      ? "text-rose-400 group-hover:text-rose-300"
-      : "text-white group-hover:text-gray-200";
-
   const isPositive = (holding.profit || 0) >= 0;
-  const currentVal = holding.current_value ?? holding.quantity * (holding.current_price || holding.average_buy_price);
-  const investedVal = holding.invested ?? holding.quantity * holding.average_buy_price;
+  const currentVal =
+    holding.current_value ??
+    holding.quantity * (holding.current_price || holding.average_buy_price);
+  const investedVal =
+    holding.invested ?? holding.quantity * holding.average_buy_price;
 
   const allocationWeight =
     totalPortfolioValue > 0 && currentVal > 0
@@ -55,110 +44,134 @@ export function StockCard({
       : 0;
 
   return (
-    <div className="liquid-card-shell group">
-      <div className="liquid-card-inner">
-        {/* Subtle top indicator bar */}
-        <div
-          className={`absolute top-0 left-0 right-0 h-[2px] opacity-75 group-hover:opacity-100 transition-opacity ${
-            isPositive ? "bg-emerald-500" : "bg-rose-500"
-          }`}
-        />
-
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3.5 pt-1">
+    <div
+      data-interactive-card="true"
+      className="editorial-frame editorial-frame-hover p-5 rounded-2xl flex flex-col justify-between h-full group space-y-4 relative overflow-hidden select-none"
+    >
+      <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+        {/* 1. Header: Stock Identity & Live Price / Return */}
         <div>
-          <div className="flex items-center gap-2">
-            <span className={`font-bold text-lg font-mono tracking-tight transition-colors ${stockNameColor}`}>
-              {holding.ticker}
-            </span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-gray-400 border border-white/8">
-              NSE
-            </span>
-            {allocationWeight > 0 && (
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                {allocationWeight.toFixed(1)}% wt
+          <div className="flex items-start justify-between gap-3">
+            {/* Stock Anchor */}
+            <div className="space-y-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-lg font-bold font-mono text-white tracking-tight group-hover:text-emerald-400 transition-colors duration-200">
+                  {holding.ticker}
+                </h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.04] text-gray-300 border border-white/[0.06]">
+                  NSE
+                </span>
+                {allocationWeight > 0 && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-semibold flex items-center gap-1">
+                    <Layers className="w-2.5 h-2.5" />
+                    {allocationWeight.toFixed(1)}% wt
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 font-sans">
+                {holding.quantity} shares @ {formatCurrency(holding.average_buy_price)}
+              </p>
+            </div>
+
+            {/* Current Price & Session / Return Signal */}
+            <div className="text-right shrink-0 font-mono">
+              <span className="text-sm font-light text-white block">
+                {holding.current_price ? formatCurrency(holding.current_price) : "—"}
               </span>
-            )}
+              <div
+                className={`inline-flex items-center gap-1 text-[11px] font-semibold pt-0.5 ${
+                  isPositive ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {isPositive ? (
+                  <TrendingUp className="w-3 h-3" />
+                ) : (
+                  <TrendingDown className="w-3 h-3" />
+                )}
+                <span>
+                  {isPositive ? "+" : ""}
+                  {formatPercentage(holding.returns)}
+                </span>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {holding.quantity} shares @ {formatCurrency(holding.average_buy_price)}
-          </p>
+
+          {/* 2. Financial Metrics Bar */}
+          <div className="mt-4 pt-3 pb-2.5 border-t border-b border-white/[0.05] grid grid-cols-3 gap-2 text-xs font-mono">
+            <div>
+              <span className="text-[10px] text-gray-500 uppercase tracking-wider block">
+                Invested
+              </span>
+              <span className="text-gray-300 font-medium text-xs block mt-0.5">
+                {formatCurrency(investedVal)}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-gray-500 uppercase tracking-wider block">
+                Current Val
+              </span>
+              <span className="text-white font-medium text-xs block mt-0.5">
+                {formatCurrency(currentVal)}
+              </span>
+            </div>
+
+            <div className="text-right">
+              <span className="text-[10px] text-gray-500 uppercase tracking-wider block">
+                Unrealized P&L
+              </span>
+              <span
+                className={`font-bold text-xs block mt-0.5 transition-all duration-200 ${
+                  isPositive
+                    ? "text-emerald-400 group-hover:brightness-110"
+                    : "text-rose-400 group-hover:brightness-110"
+                }`}
+              >
+                {formatCurrency(holding.profit)}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Current Live Price & Return % */}
-        <div className="text-right">
-          <span className="text-sm font-bold font-mono text-gray-100 block">
-            {holding.current_price ? formatCurrency(holding.current_price) : "Fetching..."}
-          </span>
-          <Badge variant={isPositive ? "mint" : "coral"} size="sm" dot>
-            {isPositive ? (
-              <TrendingUp className="w-3 h-3 mr-0.5 inline" />
-            ) : (
-              <TrendingDown className="w-3 h-3 mr-0.5 inline" />
-            )}
-            {formatPercentage(holding.returns)}
-          </Badge>
-        </div>
-      </div>
+        {/* 3. Action Toolbar (Buy, Sell, Edit, Delete) */}
+        <div className="pt-2 flex items-center justify-between gap-2 font-mono text-xs mt-auto">
+          <div className="flex items-center gap-2 flex-1">
+            <button
+              onClick={() => onBuy(holding)}
+              className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/20 hover:border-emerald-400 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>Buy</span>
+            </button>
 
-      {/* Financial Valuation Metrics */}
-      <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-[#080b10]/70 border border-white/5 mb-4 text-xs font-mono">
-        <div>
-          <span className="text-gray-500 block text-[11px]">Invested</span>
-          <span className="text-gray-300 font-semibold">{formatCurrency(investedVal)}</span>
-        </div>
-        <div className="text-right">
-          <span className="text-gray-500 block text-[11px]">Current Value</span>
-          <span className="text-white font-semibold">{formatCurrency(currentVal)}</span>
-        </div>
-        <div className="col-span-2 pt-2 border-t border-white/5 flex justify-between items-center">
-          <span className="text-gray-500 text-[11px]">Unrealized P&L</span>
-          <span className={`font-bold ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
-            {formatCurrency(holding.profit)}
-          </span>
-        </div>
-      </div>
+            <button
+              onClick={() => onSell(holding)}
+              className="flex-1 py-1.5 px-3 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/20 hover:border-rose-400 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200"
+            >
+              <MinusCircle className="w-3.5 h-3.5" />
+              <span>Sell</span>
+            </button>
+          </div>
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-1.5 pt-1">
-        <Button
-          variant="mint"
-          size="sm"
-          onClick={() => onBuy(holding)}
-          className="flex-1 text-xs py-1.5 font-medium"
-        >
-          <ShoppingCart className="w-3.5 h-3.5 mr-1" />
-          Buy
-        </Button>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => onSell(holding)}
-          className="flex-1 text-xs py-1.5 font-medium"
-        >
-          <MinusCircle className="w-3.5 h-3.5 mr-1" />
-          Sell
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onEdit(holding)}
-          className="h-8 w-8 text-gray-400 hover:text-gray-200 hover:bg-white/10 rounded-xl"
-          title="Edit Holding"
-        >
-          <Edit2 className="w-3.5 h-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(holding)}
-          className="h-8 w-8 text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl"
-          title="Delete Holding"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </Button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => onEdit(holding)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.12] transition-colors"
+              title="Edit Holding"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => onDelete(holding)}
+              className="p-1.5 rounded-lg text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 transition-colors"
+              title="Delete Holding"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
   );
 }

@@ -13,21 +13,35 @@ export function Card({
   glow = "none",
   hoverable = false,
   children,
+  onPointerMove,
   ...props
 }: CardProps) {
   const glowStyles = {
     none: "",
-    subtle: "fintech-card-glow",
-    mint: "shadow-[0_0_30px_-5px_rgba(16,185,129,0.12)] border-emerald-500/20",
-    coral: "shadow-[0_0_30px_-5px_rgba(244,63,94,0.12)] border-rose-500/20",
+    subtle: "border-white/[0.12] hover:border-white/[0.2]",
+    mint: "border-emerald-500/20 hover:border-emerald-500/35 shadow-[0_8px_24px_-8px_rgba(16,185,129,0.12)]",
+    coral: "border-rose-500/20 hover:border-rose-500/35 shadow-[0_8px_24px_-8px_rgba(244,63,94,0.12)]",
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    e.currentTarget.style.setProperty("--mouse-x", `${x.toFixed(1)}px`);
+    e.currentTarget.style.setProperty("--mouse-y", `${y.toFixed(1)}px`);
+    if (onPointerMove) {
+      onPointerMove(e);
+    }
   };
 
   return (
     <div
+      data-interactive-card="true"
+      onPointerMove={handlePointerMove}
       className={cn(
         "fintech-card p-5 relative overflow-hidden",
         glowStyles[glow],
-        hoverable && "hover:bg-[#131924] cursor-pointer",
+        hoverable && "cursor-pointer",
         className
       )}
       {...props}

@@ -4,6 +4,7 @@ import shutil
 import unittest
 from fastapi.testclient import TestClient
 from app.api.main import app
+from app.models.fundamentals import DecisionRating
 from app.services.fundamental_service import FundamentalDataService
 from app.services.historical_analyzer import HistoricalFundamentalAnalyzer
 from app.services.valuation_analyzer import ValuationAnalyzer
@@ -44,7 +45,7 @@ class TestFundamentalsEngine(unittest.TestCase):
         val_status = self.val_analyzer.evaluate_valuation(ratios, bs.is_financial_institution)
         decision = self.decision_engine.evaluate(meta, inc, bs, cf, ratios, trends, val_status, [])
 
-        self.assertIn(decision.decision.value, ["STRONG BUY CANDIDATE", "BUY CANDIDATE", "HOLD / WATCH", "AVOID"])
+        self.assertIn(decision.decision.value, [d.value for d in DecisionRating])
         self.assertGreaterEqual(decision.fundamental_score, 0.0)
         self.assertLessEqual(decision.fundamental_score, 100.0)
 
@@ -58,7 +59,7 @@ class TestFundamentalsEngine(unittest.TestCase):
         val_status = self.val_analyzer.evaluate_valuation(ratios, bs.is_financial_institution)
         decision = self.decision_engine.evaluate(meta, inc, bs, cf, ratios, trends, val_status, [])
 
-        self.assertIn(decision.decision.value, ["STRONG BUY CANDIDATE", "BUY CANDIDATE", "HOLD / WATCH", "AVOID"])
+        self.assertIn(decision.decision.value, [d.value for d in DecisionRating])
         self.assertGreater(decision.fundamental_score, 50.0)  # TCS is high quality
 
     def test_api_research_endpoint(self):

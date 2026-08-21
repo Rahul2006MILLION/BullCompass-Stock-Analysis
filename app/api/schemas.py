@@ -218,6 +218,135 @@ class InvestmentDecisionResponse(BaseModel):
     is_bank: bool
 
 
+class PriceMomentumResponse(BaseModel):
+    current_price: float
+    price_change_1d: Optional[float] = 0.0
+    price_change_5d: Optional[float] = 0.0
+    price_change_20d: Optional[float] = 0.0
+    fifty_two_week_high: Optional[float] = None
+    fifty_two_week_low: Optional[float] = None
+    distance_from_52w_high_pct: Optional[float] = None
+    technical_stance: str = "NEUTRAL"
+    interpretation: str = ""
+
+
+class BusinessQualityResponse(BaseModel):
+    score: float = 7.0
+    revenue_consistency: str = "GOOD"
+    margin_stability: str = "STABLE"
+    capital_intensity: str = "MODERATE"
+    cyclicality: str = "MODERATELY_CYCLICAL"
+    moat_rating: str = "NARROW_MOAT"
+    summary: str = ""
+
+
+class FinancialHealthResponse(BaseModel):
+    solvency_score: float = 80.0
+    total_debt_cr: Optional[float] = 0.0
+    cash_and_equivalents_cr: Optional[float] = 0.0
+    net_debt_cr: Optional[float] = 0.0
+    debt_to_equity: Optional[float] = None
+    current_ratio: Optional[float] = None
+    interest_coverage: Optional[float] = None
+    balance_sheet_stance: str = "HEALTHY"
+    summary: str = ""
+
+
+class EarningsQualityResponse(BaseModel):
+    quality_status: str = "HIGH_QUALITY_CONVERTING"
+    cfo_to_pat_ratio: Optional[float] = None
+    fcf_conversion_pct: Optional[float] = None
+    pat_vs_cfo_trend: str = "PAT and CFO moving in tandem"
+    margin_vs_revenue_trajectory: str = "Revenue growing with healthy margins"
+    warning_flags: List[str] = []
+    summary: str = ""
+
+
+class ValuationAssessmentResponse(BaseModel):
+    valuation_tier: str = "FAIRLY VALUED"
+    pe_ratio: Optional[float] = None
+    forward_pe: Optional[float] = None
+    pb_ratio: Optional[float] = None
+    ev_to_ebitda: Optional[float] = None
+    peg_ratio: Optional[float] = None
+    dividend_yield: Optional[float] = None
+    valuation_rationale: str = ""
+
+
+class NewsCausalItemResponse(BaseModel):
+    headline: str
+    source: str
+    published_at: str
+    importance: str
+    event_summary: str
+    economic_transmission_mechanism: str
+    revenue_margin_impact: str
+    catalyst_durability: str = "TEMPORARY"
+
+
+class SectorMacroResponse(BaseModel):
+    key_drivers: List[str] = []
+    macro_sensitivity: str = ""
+    tailwinds: List[str] = []
+    headwinds: List[str] = []
+    summary: str = ""
+
+
+class ScenarioCaseResponse(BaseModel):
+    scenario_title: str
+    probability_pct: int
+    assumptions: List[str]
+    growth_margin_projection: str
+    expected_return_stance: str
+    summary: str
+
+
+class ScenarioAnalysisResponse(BaseModel):
+    bull_case: ScenarioCaseResponse
+    base_case: ScenarioCaseResponse
+    bear_case: ScenarioCaseResponse
+
+
+class RiskItemResponse(BaseModel):
+    category: str
+    title: str
+    severity: str
+    rationale: str
+
+
+class RiskAnalysisMatrixResponse(BaseModel):
+    risks: List[RiskItemResponse] = []
+    primary_vulnerability: str = ""
+
+
+class ThesisInvalidationResponse(BaseModel):
+    triggers: List[str] = []
+    quantifiable_thresholds: List[str] = []
+
+
+class PortfolioContextResponse(BaseModel):
+    is_owned: bool = False
+    quantity: Optional[float] = None
+    average_buy_price: Optional[float] = None
+    current_price: float = 0.0
+    invested_value: Optional[float] = None
+    current_value: Optional[float] = None
+    unrealized_pnl: Optional[float] = None
+    unrealized_pnl_pct: Optional[float] = None
+    portfolio_allocation_pct: Optional[float] = None
+    concentration_risk_flag: bool = False
+    recommended_action: str = "WATCH"
+    action_reasoning: str = ""
+
+
+class FinalVerdictResponse(BaseModel):
+    verdict: str = "HOLD"
+    conviction_score: int = 65
+    time_horizon: str = "1-3 years"
+    margin_of_safety: str = "MEDIUM"
+    executive_summary: str = ""
+
+
 class ComprehensiveResearchResponse(BaseModel):
     ticker: str
     company_name: str
@@ -236,6 +365,21 @@ class ComprehensiveResearchResponse(BaseModel):
     ai_thesis_report: str
     generated_at: str
     ollama_status: str
+
+    # Structured Institutional Research Extensions
+    price_momentum: Optional[PriceMomentumResponse] = None
+    business_quality: Optional[BusinessQualityResponse] = None
+    financial_health: Optional[FinancialHealthResponse] = None
+    earnings_quality: Optional[EarningsQualityResponse] = None
+    valuation_assessment: Optional[ValuationAssessmentResponse] = None
+    news_causal_analysis: Optional[List[NewsCausalItemResponse]] = None
+    sector_macro: Optional[SectorMacroResponse] = None
+    scenario_analysis: Optional[ScenarioAnalysisResponse] = None
+    risk_matrix: Optional[RiskAnalysisMatrixResponse] = None
+    thesis_invalidation: Optional[ThesisInvalidationResponse] = None
+    portfolio_context: Optional[PortfolioContextResponse] = None
+    final_verdict: Optional[FinalVerdictResponse] = None
+
 
 
 class AIAnalysisResponse(BaseModel):

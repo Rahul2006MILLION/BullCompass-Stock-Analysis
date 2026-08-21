@@ -471,16 +471,25 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 px-6 py-4 bg-zinc-950/95 border-t border-zinc-800 flex items-center justify-between">
-          <span className="text-xs text-zinc-500">
+        <div className="sticky bottom-0 px-6 py-4 bg-zinc-950/95 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="text-xs text-zinc-500 font-mono">
             Analysis ID: #{opportunity.id} • Generated at {new Date(opportunity.created_at).toLocaleString()}
           </span>
-          <button
-            onClick={onClose}
-            className="px-5 py-2 text-xs font-bold text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl transition-colors cursor-pointer"
-          >
-            Close Memo
-          </button>
+          <div className="flex items-center gap-2.5">
+            <a
+              href={`/ai-analysis?ticker=${opportunity.ticker}`}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 rounded-xl transition-all font-mono"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              Open Deep Research Terminal
+            </a>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-bold text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl transition-colors cursor-pointer"
+            >
+              Close Memo
+            </button>
+          </div>
         </div>
       </div>
     </div>

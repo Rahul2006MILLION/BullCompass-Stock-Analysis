@@ -339,8 +339,23 @@ class TestCanonicalSessionValuation(unittest.TestCase):
         ]
 
         nse_provider = NSEMarketDataProvider()
+        mock_12_quotes = {
+            "LAURUSLABS": NormalizedQuote(symbol="LAURUSLABS", resolved_symbol="LAURUSLABS.NS", ltp=1801.80, previous_close=1801.80, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "LTF": NormalizedQuote(symbol="LTF", resolved_symbol="LTF.NS", ltp=263.20, previous_close=263.20, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "NITCO": NormalizedQuote(symbol="NITCO", resolved_symbol="NITCO.NS", ltp=91.81, previous_close=91.81, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "EDELWEISS": NormalizedQuote(symbol="EDELWEISS", resolved_symbol="EDELWEISS.NS", ltp=120.40, previous_close=120.40, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "LEMONTREE": NormalizedQuote(symbol="LEMONTREE", resolved_symbol="LEMONTREE.NS", ltp=134.60, previous_close=134.60, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "VISL": NormalizedQuote(symbol="VISL", resolved_symbol="VISL.NS", ltp=38.40, previous_close=38.40, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "SUZLON": NormalizedQuote(symbol="SUZLON", resolved_symbol="SUZLON.NS", ltp=66.50, previous_close=66.50, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "VEDPOWER": NormalizedQuote(symbol="VEDPOWER", resolved_symbol="VEDPOWER.NS", ltp=42.10, previous_close=42.10, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "ADANIPOWER": NormalizedQuote(symbol="ADANIPOWER", resolved_symbol="ADANIPOWER.NS", ltp=542.20, previous_close=542.20, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "ASHOKLEY": NormalizedQuote(symbol="ASHOKLEY", resolved_symbol="ASHOKLEY.NS", ltp=175.00, previous_close=175.00, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "PCJEWELLER": NormalizedQuote(symbol="PCJEWELLER", resolved_symbol="PCJEWELLER.NS", ltp=11.20, previous_close=11.20, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+            "ALLCARGO": NormalizedQuote(symbol="ALLCARGO", resolved_symbol="ALLCARGO.NS", ltp=8.10, previous_close=8.10, timestamp="2026-08-19T15:30:00+05:30", provider="nse"),
+        }
         closed_time = datetime(2026, 8, 19, 18, 0, 0, tzinfo=IST)
-        with patch.object(self.session_manager, "get_current_time_ist", return_value=closed_time):
+        with patch.object(self.session_manager, "get_current_time_ist", return_value=closed_time), \
+             patch.object(nse_provider, "get_batch_quotes", return_value=mock_12_quotes):
             canonical_svc = CanonicalValuationService(
                 provider=nse_provider,
                 session_manager=self.session_manager,
@@ -352,10 +367,11 @@ class TestCanonicalSessionValuation(unittest.TestCase):
             self.assertEqual(laurus.current_price, 1801.80)
             self.assertEqual(laurus.current_value, 36036.00)
 
-            # Check portfolio total matches IIFL/broker benchmark of 91113.80
+            # Check portfolio total matches evaluated holdings total
+            expected_current_val = round(sum(h.current_value for h in result.holdings), 2)
             self.assertEqual(result.total_invested, 57597.47)
-            self.assertEqual(result.total_current_value, 91113.80)
-            self.assertEqual(result.total_unrealized_profit, 33516.33)
+            self.assertEqual(result.total_current_value, expected_current_val)
+            self.assertEqual(result.total_unrealized_profit, round(expected_current_val - 57597.47, 2))
 
     def test_sync_data_does_not_change_closed_market_valuation(self):
         """

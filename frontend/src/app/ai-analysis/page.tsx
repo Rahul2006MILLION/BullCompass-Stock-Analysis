@@ -9,10 +9,18 @@ import { Input } from "@/components/ui/Input";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { ComprehensiveResearchReport } from "@/types/research";
-import { InvestmentAssessmentCard } from "@/components/research/InvestmentAssessmentCard";
-import { FinancialStatementsTable } from "@/components/research/FinancialStatementsTable";
-import { RatiosGrid } from "@/components/research/RatiosGrid";
+import { ExecutiveVerdictCard } from "@/components/research/ExecutiveVerdictCard";
+import { PortfolioContextCard } from "@/components/research/PortfolioContextCard";
+import { PriceMomentumCard } from "@/components/research/PriceMomentumCard";
+import { EarningsQualityCard } from "@/components/research/EarningsQualityCard";
+import { ValuationContextCard } from "@/components/research/ValuationContextCard";
+import { ScenarioAnalysisCard } from "@/components/research/ScenarioAnalysisCard";
+import { RiskMatrixCard } from "@/components/research/RiskMatrixCard";
+import { ThesisInvalidationCard } from "@/components/research/ThesisInvalidationCard";
+import { NewsTransmissionCard } from "@/components/research/NewsTransmissionCard";
 import { QualityScoreBreakdownCard } from "@/components/research/QualityScoreBreakdownCard";
+import { RatiosGrid } from "@/components/research/RatiosGrid";
+import { FinancialStatementsTable } from "@/components/research/FinancialStatementsTable";
 import { AIThesisMemo } from "@/components/research/AIThesisMemo";
 import { BuyModal } from "@/components/portfolio/BuyModal";
 import {
@@ -26,8 +34,6 @@ import {
   Copy,
   Check,
   RefreshCw,
-  FileSpreadsheet,
-  Layers,
 } from "lucide-react";
 
 const POPULAR_ANALYSIS_STOCKS = [
@@ -38,6 +44,8 @@ const POPULAR_ANALYSIS_STOCKS = [
   "TATAMOTORS",
   "ASIANPAINT",
   "ICICIBANK",
+  "LAURUSLABS",
+  "LTF",
 ];
 
 function AIAnalysisContent() {
@@ -97,10 +105,10 @@ function AIAnalysisContent() {
       <div>
         <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
           <Bot className="w-6 h-6 text-emerald-400" />
-          <span>Long-Term Investment Research & Decision Terminal</span>
+          <span>Institutional Long-Term Investment Research Engine</span>
         </h1>
         <p className="text-xs text-gray-400 mt-1">
-          Evidence-grounded fundamental scoring, audited 3-statement analysis, valuation modeling, and AI investment theses
+          Audited multi-year 3-statement analysis, cash flow & earnings quality diagnosis, valuation modeling, scenario projections, and causal transmission
         </p>
       </div>
 
@@ -116,7 +124,7 @@ function AIAnalysisContent() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex-1">
               <Input
-                placeholder="Enter stock ticker (e.g. HDFCBANK, TCS, RELIANCE, INFY)..."
+                placeholder="Enter stock ticker (e.g. HDFCBANK, TCS, RELIANCE, INFY, LAURUSLABS)..."
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value.toUpperCase())}
                 icon={<Search className="w-4 h-4" />}
@@ -167,7 +175,7 @@ function AIAnalysisContent() {
               Executing Multi-Stage Investment Research Pipeline
             </h3>
             <p className="text-xs text-gray-400">
-              Pulls multi-year audited statements → Computes 3Y CAGRs & margins → Evaluates solvency & valuation multiples → Computes deterministic Quality Score → Synthesizes institutional thesis via Ollama.
+              Pulls multi-year audited statements → Computes 3Y CAGRs & margins → Evaluates solvency & valuation multiples → Diagnoses earnings quality (PAT vs CFO) → Synthesizes scenarios & institutional thesis.
             </p>
           </div>
         </Card>
@@ -195,9 +203,12 @@ function AIAnalysisContent() {
       {/* Full Comprehensive Research Report */}
       {report && !isLoading && (
         <div className="space-y-6">
-          {/* 1. Hero Investment Assessment Card */}
-          <InvestmentAssessmentCard
+          {/* 1. Hero Executive Verdict Card */}
+          <ExecutiveVerdictCard
+            verdict={report.final_verdict}
             decision={report.decision}
+            valuation={report.valuation_assessment}
+            momentum={report.price_momentum}
             ticker={report.ticker}
             companyName={report.company_name}
             currentPrice={report.current_price}
@@ -240,26 +251,72 @@ function AIAnalysisContent() {
             </div>
           </div>
 
-          {/* 2. Deterministic Quality Score Breakdown & Trend Signals */}
+          {/* 2. Portfolio Context Overlay (Holdings / P&L / Allocation Risk) */}
+          <PortfolioContextCard
+            portfolio={report.portfolio_context}
+            ticker={report.ticker}
+          />
+
+          {/* 3. Price Momentum & Technical Positioning Grid */}
+          <PriceMomentumCard
+            momentum={report.price_momentum}
+          />
+
+          {/* 4. Earnings Quality & Cash Flow Audit (PAT vs CFO) */}
+          <EarningsQualityCard
+            earningsQuality={report.earnings_quality}
+          />
+
+          {/* 5. Valuation Multiple & Multi-Factor Rationale */}
+          <ValuationContextCard
+            valuation={report.valuation_assessment}
+            ratios={report.ratios}
+            incomeStatement={report.income_statement}
+          />
+
+          {/* 6. Deterministic Quality Score Breakdown & Trend Signals */}
           <QualityScoreBreakdownCard
             breakdown={report.decision.score_breakdown}
             trends={report.historical_trends}
           />
 
-          {/* 3. Key Financial Ratios Grid */}
+          {/* 7. Key Financial Ratios Grid */}
           <RatiosGrid
             ratios={report.ratios}
             incomeStatement={report.income_statement}
           />
 
-          {/* 4. Audited Multi-Year Financial Statements */}
+          {/* 8. Audited Multi-Year Financial Statements (Income Stmt, Balance Sheet, Cash Flow) */}
           <FinancialStatementsTable
             incomeStatement={report.income_statement}
             balanceSheet={report.balance_sheet}
             cashFlow={report.cash_flow}
           />
 
-          {/* 5. Institutional AI Research Memorandum with Epistemic Tagging */}
+          {/* 9. News & Macroeconomic Transmission Engine */}
+          <NewsTransmissionCard
+            newsCausal={report.news_causal_analysis}
+            sectorMacro={report.sector_macro}
+            recentNews={report.recent_news}
+            sector={report.sector}
+          />
+
+          {/* 10. Scenario Analysis (Bull, Base, Bear Projections) */}
+          <ScenarioAnalysisCard
+            scenarioAnalysis={report.scenario_analysis}
+          />
+
+          {/* 11. Categorized Downside Risk Radar */}
+          <RiskMatrixCard
+            riskMatrix={report.risk_matrix}
+          />
+
+          {/* 12. Thesis Invalidation Triggers & Numerical Stop Conditions */}
+          <ThesisInvalidationCard
+            thesisInvalidation={report.thesis_invalidation}
+          />
+
+          {/* 13. Institutional AI Research Memorandum with Epistemic Tagging */}
           <AIThesisMemo
             thesisReport={report.ai_thesis_report}
             ticker={report.ticker}

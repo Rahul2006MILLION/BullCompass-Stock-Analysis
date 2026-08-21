@@ -35,34 +35,100 @@ export default function PortfolioPage() {
     return portfolio?.holdings?.map((h) => h.ticker) || [];
   }, [portfolio?.holdings]);
 
-  const fetchPortfolio = useCallback(async () => {
+  const fetchPortfolio = useCallback(async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+      }
       const data = await api.getPortfolio();
       setPortfolio(data);
     } catch (err: any) {
-      error("Connection Error", err?.message || "Failed to load portfolio data.");
+      if (!silent) {
+        error("Connection Error", err?.message || "Failed to load portfolio data.");
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, [error]);
 
-  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>, status?: MarketStatus | null) => {
-    // Only re-fetch backend canonical valuation when market is actively OPEN
-    if (status?.is_open) {
-      fetchPortfolio();
-    }
-  }, [fetchPortfolio]);
-
-  const { isPolling, syncNow, lastSyncTime } = useLiveQuotes({
+  // Live quotes polling - updates only in-memory quotes map, never triggers full reload/skeletons
+  const { quotes, isPolling, syncNow, lastSyncTime } = useLiveQuotes({
     tickers: holdingTickers,
     intervalMs: 10000,
-    onQuotesUpdated: handleQuotesUpdated,
   });
 
+  // Dynamically compute live valuations whenever live quotes or static portfolio holdings update
+  const dynamicPortfolio = useMemo(() => {
+    if (!portfolio) return null;
+
+    let calculatedInvested = 0;
+    let calculatedCurrentValue = 0;
+
+    const dynamicHoldings: HoldingItem[] = (portfolio.holdings || []).map((h) => {
+      const cleanTicker = h.ticker.trim().toUpperCase();
+      const quote = quotes[cleanTicker] || quotes[h.ticker];
+      const livePrice = quote?.current_price && quote.current_price > 0 ? quote.current_price : null;
+      const currentPrice = livePrice ?? h.current_price ?? h.average_buy_price;
+
+      const invested = h.invested != null ? Number(h.invested) : Math.round(h.quantity * h.average_buy_price * 100) / 100;
+      const currentValue = Math.round(h.quantity * currentPrice * 100) / 100;
+      const profit = Math.round((currentValue - invested) * 100) / 100;
+      const returns = invested > 0 ? Math.round((profit / invested) * 10000) / 100 : 0;
+
+      calculatedInvested += invested;
+      calculatedCurrentValue += currentValue;
+
+      return {
+        ...h,
+        current_price: currentPrice,
+        invested,
+        current_value: currentValue,
+        profit,
+        returns,
+      };
+    });
+
+    const totalInvested = Math.round(calculatedInvested * 100) / 100;
+    const totalCurrentValue = Math.round(calculatedCurrentValue * 100) / 100;
+    const totalUnrealizedProfit = Math.round((totalCurrentValue - totalInvested) * 100) / 100;
+    const totalReturnPercentage = totalInvested > 0 ? Math.round((totalUnrealizedProfit / totalInvested) * 10000) / 100 : 0;
+
+    return {
+      ...portfolio,
+      total_holdings: dynamicHoldings.length,
+      total_invested: totalInvested,
+      total_current_value: totalCurrentValue,
+      total_unrealized_profit: totalUnrealizedProfit,
+      total_return_percentage: totalReturnPercentage,
+      holdings: dynamicHoldings,
+    };
+  }, [portfolio, quotes]);
+
   useEffect(() => {
-    fetchPortfolio();
+    fetchPortfolio(false);
+
+    const handlePortfolioUpdate = () => {
+      // Triggered when a new snapshot is recorded or portfolio changes externally
+      fetchPortfolio(true);
+    };
+
+    window.addEventListener("portfolio-updated", handlePortfolioUpdate);
+    return () => {
+      window.removeEventListener("portfolio-updated", handlePortfolioUpdate);
+    };
   }, [fetchPortfolio]);
+
+  const handleManualSync = async () => {
+    try {
+      await syncNow();
+      await fetchPortfolio(true);
+      success("Quotes Synced", "Live quotes and portfolio valuations updated.");
+    } catch (err: any) {
+      error("Sync Error", err?.message || "Failed to sync quotes.");
+    }
+  };
 
   const handleOpenBuy = (holding?: HoldingItem) => {
     setSelectedHolding(holding || null);
@@ -86,13 +152,13 @@ export default function PortfolioPage() {
     try {
       await api.deleteHolding(holding.id);
       success("Holding Deleted", `${holding.ticker} was successfully deleted.`);
-      fetchPortfolio();
+      fetchPortfolio(true);
     } catch (err: any) {
       error("Delete Failed", err?.message || "Could not delete holding.");
     }
   };
 
-  const isPositive = (portfolio?.total_unrealized_profit || 0) >= 0;
+  const isPositive = (dynamicPortfolio?.total_unrealized_profit || 0) >= 0;
 
   return (
     <>
@@ -118,7 +184,7 @@ export default function PortfolioPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={syncNow}
+              onClick={handleManualSync}
               disabled={isPolling}
               className="text-xs border-white/10 hover:border-white/20"
             >
@@ -144,7 +210,7 @@ export default function PortfolioPage() {
               Holdings Count
             </span>
             <span className="text-xl font-bold font-mono text-white mt-1 block">
-              {portfolio?.total_holdings || 0} Assets
+              {dynamicPortfolio?.total_holdings || 0} Assets
             </span>
           </div>
 
@@ -153,7 +219,7 @@ export default function PortfolioPage() {
               Total Invested
             </span>
             <span className="text-xl font-bold font-mono text-white mt-1 block">
-              {formatCurrency(portfolio?.total_invested)}
+              {formatCurrency(dynamicPortfolio?.total_invested)}
             </span>
           </div>
 
@@ -162,7 +228,7 @@ export default function PortfolioPage() {
               Current Market Value
             </span>
             <span className="text-xl font-bold font-mono text-emerald-400 mt-1 block">
-              {formatCurrency(portfolio?.total_current_value)}
+              {formatCurrency(dynamicPortfolio?.total_current_value)}
             </span>
           </div>
 
@@ -175,8 +241,8 @@ export default function PortfolioPage() {
                 isPositive ? "text-emerald-400" : "text-rose-400"
               }`}
             >
-              {formatCurrency(portfolio?.total_unrealized_profit)} (
-              {formatPercentage(portfolio?.total_return_percentage)})
+              {formatCurrency(dynamicPortfolio?.total_unrealized_profit)} (
+              {formatPercentage(dynamicPortfolio?.total_return_percentage)})
             </span>
           </div>
         </motion.div>
@@ -189,7 +255,7 @@ export default function PortfolioPage() {
           transition={{ duration: 0.45, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
         >
           <HoldingsGrid
-            holdings={portfolio?.holdings || []}
+            holdings={dynamicPortfolio?.holdings || []}
             onBuy={handleOpenBuy}
             onSell={handleOpenSell}
             onEdit={handleOpenEdit}
@@ -204,26 +270,27 @@ export default function PortfolioPage() {
       <AddHoldingModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSuccess={fetchPortfolio}
+        onSuccess={() => fetchPortfolio(true)}
       />
       <BuyModal
         isOpen={isBuyModalOpen}
         onClose={() => setIsBuyModalOpen(false)}
-        onSuccess={fetchPortfolio}
+        onSuccess={() => fetchPortfolio(true)}
         initialHolding={selectedHolding}
       />
       <SellModal
         isOpen={isSellModalOpen}
         onClose={() => setIsSellModalOpen(false)}
-        onSuccess={fetchPortfolio}
+        onSuccess={() => fetchPortfolio(true)}
         holding={selectedHolding}
       />
       <EditHoldingModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        onSuccess={fetchPortfolio}
+        onSuccess={() => fetchPortfolio(true)}
         holding={selectedHolding}
       />
     </>
   );
 }
+

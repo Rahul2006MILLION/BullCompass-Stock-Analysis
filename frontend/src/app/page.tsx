@@ -91,19 +91,58 @@ export default function DashboardPage() {
     ]);
   }, [fetchPortfolioValuation, fetchHistoricalData]);
 
-  const handleQuotesUpdated = useCallback((quotesMap: Record<string, QuoteItem>, status?: MarketStatus | null) => {
-    // Only re-fetch backend canonical valuation when market is actively OPEN.
-    // Silent fetch of portfolio valuation only — NEVER refetch or reload historical chart.
-    if (status?.is_open) {
-      fetchPortfolioValuation(true);
-    }
-  }, [fetchPortfolioValuation]);
-
-  const { isPolling, syncNow, lastSyncTime } = useLiveQuotes({
+  // Live quotes polling - updates in-memory quotes map without full page/chart reloading
+  const { quotes, isPolling, syncNow, lastSyncTime } = useLiveQuotes({
     tickers: holdingTickers,
     intervalMs: 10000,
-    onQuotesUpdated: handleQuotesUpdated,
   });
+
+  // Dynamically compute live valuations whenever live quotes or static portfolio holdings update
+  const dynamicPortfolio = useMemo(() => {
+    if (!portfolio) return null;
+
+    let calculatedInvested = 0;
+    let calculatedCurrentValue = 0;
+
+    const dynamicHoldings: HoldingItem[] = (portfolio.holdings || []).map((h) => {
+      const cleanTicker = h.ticker.trim().toUpperCase();
+      const quote = quotes[cleanTicker] || quotes[h.ticker];
+      const livePrice = quote?.current_price && quote.current_price > 0 ? quote.current_price : null;
+      const currentPrice = livePrice ?? h.current_price ?? h.average_buy_price;
+
+      const invested = h.invested != null ? Number(h.invested) : Math.round(h.quantity * h.average_buy_price * 100) / 100;
+      const currentValue = Math.round(h.quantity * currentPrice * 100) / 100;
+      const profit = Math.round((currentValue - invested) * 100) / 100;
+      const returns = invested > 0 ? Math.round((profit / invested) * 10000) / 100 : 0;
+
+      calculatedInvested += invested;
+      calculatedCurrentValue += currentValue;
+
+      return {
+        ...h,
+        current_price: currentPrice,
+        invested,
+        current_value: currentValue,
+        profit,
+        returns,
+      };
+    });
+
+    const totalInvested = Math.round(calculatedInvested * 100) / 100;
+    const totalCurrentValue = Math.round(calculatedCurrentValue * 100) / 100;
+    const totalUnrealizedProfit = Math.round((totalCurrentValue - totalInvested) * 100) / 100;
+    const totalReturnPercentage = totalInvested > 0 ? Math.round((totalUnrealizedProfit / totalInvested) * 10000) / 100 : 0;
+
+    return {
+      ...portfolio,
+      total_holdings: dynamicHoldings.length,
+      total_invested: totalInvested,
+      total_current_value: totalCurrentValue,
+      total_unrealized_profit: totalUnrealizedProfit,
+      total_return_percentage: totalReturnPercentage,
+      holdings: dynamicHoldings,
+    };
+  }, [portfolio, quotes]);
 
   useEffect(() => {
     fetchAllData(false);
@@ -118,6 +157,16 @@ export default function DashboardPage() {
       window.removeEventListener("portfolio-updated", handlePortfolioUpdate);
     };
   }, [fetchAllData]);
+
+  const handleManualSync = async () => {
+    try {
+      await syncNow();
+      await fetchPortfolioValuation(true);
+      success("Quotes Synced", "Live quotes and portfolio valuations updated.");
+    } catch (err: any) {
+      error("Sync Error", err?.message || "Failed to sync quotes.");
+    }
+  };
 
   // Modal action handlers
   const handleOpenBuy = (holding?: HoldingItem) => {
@@ -174,7 +223,7 @@ export default function DashboardPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={syncNow}
+              onClick={handleManualSync}
               disabled={isPolling}
               className="text-xs border-white/10 hover:border-white/20"
             >
@@ -199,12 +248,12 @@ export default function DashboardPage() {
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
           <PortfolioSummaryCards
-            netWorth={portfolio?.total_current_value || 0}
-            invested={portfolio?.total_invested || 0}
-            unrealizedProfit={portfolio?.total_unrealized_profit || 0}
-            returnPercentage={portfolio?.total_return_percentage || 0}
-            realizedProfit={portfolio?.total_realized_profit || 0}
-            totalHoldings={portfolio?.total_holdings || 0}
+            netWorth={dynamicPortfolio?.total_current_value || 0}
+            invested={dynamicPortfolio?.total_invested || 0}
+            unrealizedProfit={dynamicPortfolio?.total_unrealized_profit || 0}
+            returnPercentage={dynamicPortfolio?.total_return_percentage || 0}
+            realizedProfit={dynamicPortfolio?.total_realized_profit || 0}
+            totalHoldings={dynamicPortfolio?.total_holdings || 0}
             isLoading={isPortfolioLoading}
           />
         </motion.div>
@@ -225,8 +274,8 @@ export default function DashboardPage() {
           {/* Allocation Donut (5 cols) */}
           <Card className="lg:col-span-5 p-6">
             <AllocationDonut
-              holdings={portfolio?.holdings || []}
-              totalValue={portfolio?.total_current_value || 0}
+              holdings={dynamicPortfolio?.holdings || []}
+              totalValue={dynamicPortfolio?.total_current_value || 0}
             />
           </Card>
         </motion.div>
@@ -241,7 +290,7 @@ export default function DashboardPage() {
         >
           {/* Profit / Loss Bar Chart */}
           <Card className="lg:col-span-7 p-6">
-            <ProfitLossBarChart holdings={portfolio?.holdings || []} />
+            <ProfitLossBarChart holdings={dynamicPortfolio?.holdings || []} />
           </Card>
 
           {/* AI Terminal Spotlight Promo Card */}
@@ -307,7 +356,7 @@ export default function DashboardPage() {
           </div>
 
           <HoldingsGrid
-            holdings={portfolio?.holdings || []}
+            holdings={dynamicPortfolio?.holdings || []}
             onBuy={handleOpenBuy}
             onSell={handleOpenSell}
             onEdit={handleOpenEdit}
